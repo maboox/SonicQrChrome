@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SonicQR</title><link rel="stylesheet" href="styles.css"></head>
+<body><div class="shell">
+<header><div class="brand"><img src="assets/icon.png" alt=""><div><strong dir="ltr">SonicQR</strong><small data-i18n="tagline"></small></div></div><button id="language" class="quiet" aria-label="Switch language">EN</button></header>
+<div class="beta"><span>Beta 0.2.0</span><span data-i18n="local"></span></div>
+<section class="target card"><div class="eyebrow" data-i18n="target"></div><strong id="targetName"></strong><p id="targetUrl" class="url" dir="ltr"></p><button id="refreshTarget" class="quiet" data-i18n="refresh"></button></section>
+<nav class="tabs" role="tablist"><button id="sendTab" role="tab" aria-selected="true" class="selected" data-i18n="send"></button><button id="receiveTab" role="tab" aria-selected="false" data-i18n="receive"></button></nav>
+<main>
+<section id="sendPanel">
+<div class="card"><label for="message" data-i18n="message"></label><textarea id="message" rows="4" maxlength="1000" placeholder="پیامت را بنویس…"></textarea><div class="meta"><span id="count"></span><span data-i18n="shortTip"></span></div>
+<label for="profile" data-i18n="mode"></label><select id="profile"><option value="fast" data-i18n="fast"></option><option value="hidden" data-i18n="hidden"></option></select><p class="hint" id="profileHint"></p>
+<div class="two"><div><label for="strength" data-i18n="strength"></label><select id="strength"><option value="soft" data-i18n="soft"></option><option value="normal" selected data-i18n="normal"></option><option value="strong" data-i18n="strong"></option></select></div><div><label for="password" data-i18n="password"></label><input id="password" type="password" autocomplete="off" placeholder="اختیاری"></div></div>
+<button id="build" class="primary" data-i18n="build"></button>
+<div id="ready" hidden><div class="ready-line"><span class="dot"></span><strong data-i18n="ready"></strong><span id="duration"></span></div><audio id="preview" controls preload="metadata"></audio><button id="saveSignal" class="quiet" data-i18n="saveSignal"></button></div>
+</div>
+<div class="card"><div class="step"><span data-i18n="step2">۲</span><div><h2 data-i18n="mergeTitle"></h2><p class="hint" data-i18n="mergeTip"></p></div></div><button id="arm" class="primary" disabled data-i18n="arm"></button><button id="disarm" class="danger" hidden data-i18n="disarm"></button><div id="mergeState" class="status" role="status"></div><progress id="mergeProgress" value="0" max="1" hidden></progress><p id="holdTip" class="hint"></p><p id="pathDetail" class="hint" role="status"></p><p id="mixDetail" class="hint"></p><div id="manualStart" hidden><button id="startSignal" class="primary" data-i18n="startSignal"></button><p class="hint" data-i18n="manualTip"></p></div><p class="hint" data-i18n="signalProof"></p><button id="copyDiagnostics" class="secondary" data-i18n="copyDiagnostics"></button></div>
+<details class="card"><summary data-i18n="compat"></summary><p class="hint" data-i18n="compatTip"></p><button id="enableSite" class="quiet" data-i18n="enableSite"></button><button id="disableSite" class="quiet" hidden data-i18n="disableSite"></button><p id="compatState" class="hint"></p></details>
+</section>
+<section id="receivePanel" hidden>
+<div class="card"><h2 data-i18n="readTitle"></h2><p class="hint" data-i18n="readTip"></p><label for="audioFile" class="file-picker"><span data-i18n="file"></span><input id="audioFile" type="file" accept="audio/*,.wav,.webm,.ogg,.opus,.m4a,.mp3"></label><p id="filename" class="hint"></p><label for="decodePassword" data-i18n="decodePassword"></label><input id="decodePassword" type="password" autocomplete="off"><div class="divider"><span data-i18n="or"></span></div><button id="captureTab" class="primary" data-i18n="captureTab"></button><p class="hint" data-i18n="captureTip"></p><button id="stopCapture" class="danger" hidden data-i18n="stopCapture"></button><span id="captureClock" class="clock" hidden></span></div>
+<div id="analysis" class="card" hidden><h2 data-i18n="analyzing"></h2><progress id="decodeProgress" value="0" max="1"></progress><button id="cancelDecode" class="quiet" data-i18n="cancel"></button></div>
+<div id="resultCard" class="card" hidden><div class="ready-line"><span class="dot"></span><strong data-i18n="found"></strong></div><p id="resultText" class="result" dir="auto"></p><button id="copy" class="primary" data-i18n="copy"></button></div><button id="retry" class="quiet" hidden data-i18n="retry"></button>
+</section>
+<div id="error" class="error" role="alert" hidden></div><div id="notice" class="notice" role="status" hidden></div>
+</main>
+<footer><button id="demo" class="demo-link" data-i18n="demo"></button><details><summary data-i18n="help"></summary><ol><li data-i18n="help1"></li><li data-i18n="help2"></li><li data-i18n="help3"></li><li data-i18n="help4"></li></ol><p class="hint" data-i18n="privacy"></p></details></footer>
+</div><script src="panel.js" defer></script></body></html>

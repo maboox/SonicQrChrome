@@ -1,0 +1,22 @@
+{
+  "name": "sonicqr-chrome",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Local voice-message text overlay for Chrome",
+  "license": "MIT",
+  "scripts": {
+    "build": "node scripts/build.cjs",
+    "test": "node --test tests/*.test.mjs",
+    "test:browser": "node tests/browser.cjs",
+    "test:ui": "node tests/ui.cjs",
+    "check": "npm run build && npm test && npm run test:ui && npm run test:recording && npm run test:browser",
+    "test:recording": "node tests/recording-paths.cjs"
+  },
+  "dependencies": {
+    "fflate": "0.8.3"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "@playwright/test": "1.56.1"
+  }
+}
