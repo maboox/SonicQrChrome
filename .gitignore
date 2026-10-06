@@ -2,3 +2,8 @@ node_modules/
 qa/
 *.log
 .DS_Store
+dist/
+*.crx
+*.pem
+.env
+.env.*

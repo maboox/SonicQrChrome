@@ -3,12 +3,13 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const root = path.resolve(__dirname, '..'), qa = path.join(root, 'qa');
+const extensionRoot = path.resolve(root, process.env.SONICQR_EXTENSION_DIR || '.');
 fs.mkdirSync(qa, { recursive: true });
 (async () => {
   let context;
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'sonicqr-browser-'));
   try {
-    context = await chromium.launchPersistentContext(profile, { channel: 'chromium', headless: true, ignoreDefaultArgs: ['--disable-extensions'], viewport: { width: 1100, height: 900 }, args: [`--disable-extensions-except=${root}`, `--load-extension=${root}`, '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] });
+    context = await chromium.launchPersistentContext(profile, { channel: 'chromium', headless: true, ignoreDefaultArgs: ['--disable-extensions'], viewport: { width: 1100, height: 900 }, args: [`--disable-extensions-except=${extensionRoot}`, `--load-extension=${extensionRoot}`, '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] });
     const worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
     const id = new URL(worker.url()).host;
     const manifest = await worker.evaluate(() => chrome.runtime.getManifest());

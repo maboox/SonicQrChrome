@@ -1,1 +1,560 @@
-(()=>{var A=Uint8Array,I=Uint16Array,St=Int32Array,st=new A([0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0,0,0,0]),ft=new A([0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13,0,0]),Ut=new A([16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15]),ht=function(t,r){for(var n=new I(31),e=0;e<31;++e)n[e]=r+=1<<t[e-1];for(var a=new St(n[30]),e=1;e<30;++e)for(var f=n[e];f<n[e+1];++f)a[f]=f-n[e]<<5|e;return{b:n,r:a}},ut=ht(st,2),lt=ut.b,Tt=ut.r;lt[28]=258,Tt[258]=28;var ct=ht(ft,0),Ft=ct.b,Ht=ct.r,j=new I(32768);for(l=0;l<32768;++l)T=(l&43690)>>1|(l&21845)<<1,T=(T&52428)>>2|(T&13107)<<2,T=(T&61680)>>4|(T&3855)<<4,j[l]=((T&65280)>>8|(T&255)<<8)>>1;var T,l,B=(function(t,r,n){for(var e=t.length,a=0,f=new I(r);a<e;++a)t[a]&&++f[t[a]-1];var o=new I(r);for(a=1;a<r;++a)o[a]=o[a-1]+f[a-1]<<1;var i;if(n){i=new I(1<<r);var u=15-r;for(a=0;a<e;++a)if(t[a])for(var v=a<<4|t[a],c=r-t[a],s=o[t[a]-1]++<<c,h=s|(1<<c)-1;s<=h;++s)i[j[s]>>u]=v}else for(i=new I(e),a=0;a<e;++a)t[a]&&(i[a]=j[o[t[a]-1]++]>>15-t[a]);return i}),k=new A(288);for(l=0;l<144;++l)k[l]=8;var l;for(l=144;l<256;++l)k[l]=9;var l;for(l=256;l<280;++l)k[l]=7;var l;for(l=280;l<288;++l)k[l]=8;var l,vt=new A(32);for(l=0;l<32;++l)vt[l]=5;var l;var Ct=B(k,9,1);var Dt=B(vt,5,1),X=function(t){for(var r=t[0],n=1;n<t.length;++n)t[n]>r&&(r=t[n]);return r},U=function(t,r,n){var e=r/8|0;return(t[e]|t[e+1]<<8)>>(r&7)&n},$=function(t,r){var n=r/8|0;return(t[n]|t[n+1]<<8|t[n+2]<<16)>>(r&7)},Et=function(t){return(t+7)/8|0},It=function(t,r,n){return(r==null||r<0)&&(r=0),(n==null||n>t.length)&&(n=t.length),new A(t.subarray(r,n))};var bt=["unexpected EOF","invalid block type","invalid length/literal","invalid distance","stream finished","no stream handler",,"no callback","invalid UTF-8 data","extra field too long","date not in range 1980-2099","filename too long","stream finishing","invalid zip data"],F=function(t,r,n){var e=new Error(r||bt[t]);if(e.code=t,Error.captureStackTrace&&Error.captureStackTrace(e,F),!n)throw e;return e},Pt=function(t,r,n,e){var a=t.length,f=e?e.length:0;if(!a||r.f&&!r.l)return n||new A(0);var o=!n,i=o||r.i!=2,u=r.i;o&&(n=new A(a*3));var v=function(it){var at=n.length;if(it>at){var ot=new A(Math.max(at*2,it));ot.set(n),n=ot}},c=r.f||0,s=r.p||0,h=r.b||0,m=r.l,y=r.d,x=r.m,S=r.n,d=a*8;do{if(!m){c=U(t,s,1);var M=U(t,s+1,3);if(s+=3,M)if(M==1)m=Ct,y=Dt,x=9,S=5;else if(M==2){var L=U(t,s,31)+257,Q=U(t,s+10,15)+4,J=L+U(t,s+5,31)+1;s+=14;for(var b=new A(J),N=new A(19),z=0;z<Q;++z)N[Ut[z]]=U(t,s+z*3,7);s+=Q*3;for(var R=X(N),xt=(1<<R)-1,dt=B(N,R,1),z=0;z<J;){var _=dt[U(t,s,xt)];s+=_&15;var p=_>>4;if(p<16)b[z++]=p;else{var D=0,O=0;for(p==16?(O=3+U(t,s,3),s+=2,D=b[z-1]):p==17?(O=3+U(t,s,7),s+=3):p==18&&(O=11+U(t,s,127),s+=7);O--;)b[z++]=D}}var tt=b.subarray(0,L),C=b.subarray(L);x=X(tt),S=X(C),m=B(tt,x,1),y=B(C,S,1)}else F(1);else{var p=Et(s)+4,g=t[p-4]|t[p-3]<<8,G=p+g;if(G>a){u&&F(0);break}i&&v(h+g),n.set(t.subarray(p,G),h),r.b=h+=g,r.p=s=G*8,r.f=c;continue}if(s>d){u&&F(0);break}}i&&v(h+131072);for(var Mt=(1<<x)-1,zt=(1<<S)-1,K=s;;K=s){var D=m[$(t,s)&Mt],E=D>>4;if(s+=D&15,s>d){u&&F(0);break}if(D||F(2),E<256)n[h++]=E;else if(E==256){K=s,m=null;break}else{var rt=E-254;if(E>264){var z=E-257,P=st[z];rt=U(t,s,(1<<P)-1)+lt[z],s+=P}var V=y[$(t,s)&zt],H=V>>4;V||F(3),s+=V&15;var C=Ft[H];if(H>3){var P=ft[H];C+=$(t,s)&(1<<P)-1,s+=P}if(s>d){u&&F(0);break}i&&v(h+131072);var nt=h+rt;if(h<C){var et=f-C,At=Math.min(C,nt);for(et+h<0&&F(3);h<At;++h)n[h]=e[et+h]}for(;h<nt;++h)n[h]=n[h-C]}}r.l=m,r.p=K,r.b=h,r.f=c,m&&(c=1,r.m=x,r.d=y,r.n=S)}while(!c);return h!=n.length&&o?It(n,0,h):n.subarray(0,h)};var Bt=new A(0);function pt(t,r){return Pt(t,{i:2},r&&r.out,r&&r.dictionary)}var kt=typeof TextDecoder<"u"&&new TextDecoder,Zt=0;try{kt.decode(Bt,{stream:!0}),Zt=1}catch{}var Y=48e3,q=2e3,Ot=120,Yt=25*1024*1024,qt=Object.freeze({fast:{id:1,symbolSeconds:.022,frequencies:Array.from({length:16},(t,r)=>1e3+r*400),preamble:7800,marker:600,amplitude:.68},hidden:{id:2,symbolSeconds:.026,frequencies:Array.from({length:16},(t,r)=>14500+r*280),preamble:19300,marker:13600,amplitude:.055}}),Gt=new TextEncoder,w=class extends Error{constructor(r){super(r),this.name="CodecError",this.code=r}};function yt(t){let r=65535;for(let n of t){r^=n<<8;for(let e=0;e<8;e++)r=r&32768?(r<<1^4129)&65535:r<<1&65535}return r}async function Lt(t,r,n){if(!globalThis.crypto?.subtle)throw new w("cryptoUnavailable");let e=await crypto.subtle.importKey("raw",Gt.encode(t),"PBKDF2",!1,["deriveKey"]);return crypto.subtle.deriveKey({name:"PBKDF2",salt:r,iterations:1e5,hash:"SHA-256"},e,{name:"AES-GCM",length:256},!1,[n])}async function W(t,r=""){if(t.length<9||t[0]!==83||t[1]!==81||t[2]!==3||![1,2].includes(t[3])||t[4]&-4)throw new w("invalidPacket");let n=t[5]*256+t[6];if(n>q+36||t.length!==9+n||yt(t.subarray(0,-2))!==t.at(-2)*256+t.at(-1))throw new w("invalidPacket");let e=t.slice(7,-2);if(t[4]&1){if(!r)throw new w("passwordNeeded");if(e.length<36)throw new w("invalidPacket");let a=await Lt(r,e.subarray(0,8),"decrypt");try{e=new Uint8Array(await crypto.subtle.decrypt({name:"AES-GCM",iv:e.subarray(8,20)},a,e.subarray(20)))}catch{throw new w("badPassword")}}if(t[4]&2)try{e=pt(e,{out:new Uint8Array(q+1)})}catch{throw new w("invalidPacket")}if(e.length>q)throw new w("messageTooLong");try{return{text:new TextDecoder("utf-8",{fatal:!0}).decode(e),profile:t[3]===1?"fast":"hidden"}}catch{throw new w("invalidPacket")}}function Nt(t,r,n=Y){if(r===n)return t;let e=new Float32Array(Math.round(t.length*n/r));for(let a=0;a<e.length;a++){let f=a*r/n,o=Math.floor(f),i=f-o;e[a]=(t[o]??0)*(1-i)+(t[Math.min(o+1,t.length-1)]??0)*i}return e}function wt(t,r,n,e,a){let f=2*Math.cos(2*Math.PI*e/a),o=0,i=0,u=Math.min(t.length,r+n);for(let v=Math.max(0,r);v<u;v++){let c=t[v]+f*o-i;i=o,o=c}return Math.max(0,o*o+i*i-f*o*i)}function gt(t,r,n,e,a){let f=-1,o=0;for(let i=0;i<16;i++){let u=wt(t,r,n,e.frequencies[i],a);u>f&&(f=u,o=i)}return o}function Z(t,r,n,e,a,f){let o=Math.floor(f*.68),i=f*.16,u=gt(t,Math.round(r+n*2*f+i),o,e,a),v=gt(t,Math.round(r+(n*2+1)*f+i),o,e,a);return u<<4|v}function Kt(t,r,n){let e=2*Math.PI*n/r,a=Math.cos(e),f=Math.sin(e)/Math.SQRT2,o=1+f,i=(1+a)/2/o,u=-(1+a)/o,v=i,c=-2*a/o,s=(1-f)/o,h=0,m=0,y=0,x=0,S=new Float32Array(t.length);for(let d=0;d<t.length;d++){let M=i*t[d]+u*h+v*m-c*y-s*x;S[d]=M,m=h,h=t[d],x=y,y=M}return S}function Vt(t,r,n){let e=Math.round(.024*r),a=Math.round(.008*r),f=[],o=null;for(let i=0;i+e<=t.length;i+=a){let u=0;for(let c=i;c<i+e;c++)u+=t[c]*t[c];let v=u>1e-10?wt(t,i,e,n.marker,r)/(u*e):0;v>.1?(o||(o={first:i,last:i,score:v}),o.last=i,o.score=Math.max(v,o.score)):o&&(f.push(o),o=null)}return o&&f.push(o),f.filter(i=>(i.last-i.first)/r>=.032).sort((i,u)=>u.score-i.score).slice(0,48).map(i=>({start:i.last+e/2+.05*r,score:i.score}))}async function mt(t,r,n="",e=()=>{}){if(!t.length||t.length/r>Ot+.1)throw new w("audioTooLong");if(r<16e3)throw new w("sampleRateLow");let a=null;for(let[f,o]of Object.entries(qt)){if(r/2<=o.preamble+100)continue;let i=f==="fast"&&r>24e3?24e3:r,u=i===r?t:Nt(t,r,i);f==="hidden"&&(u=Kt(u,i,12e3));let v=Vt(u,i,o);e(f==="fast"?.15:.6);for(let c=0;c<v.length;c++){for(let s of[1,.9975,1.0025,.995,1.005]){let h=Math.floor(o.symbolSeconds*Y)*i/Y*s;for(let m=-.036*i;m<=.044*i;m+=Math.max(1,Math.round(8e-4*i))){let y=Math.round(v[c].start+m);if(y<0||y+18*h>u.length)continue;let x=[83,81,3,o.id],S=!0;for(let g=0;g<x.length;g++)if(Z(u,y,g,o,i,h)!==x[g]){S=!1;break}if(!S)continue;let d=Z(u,y,4,o,i,h),M=Z(u,y,5,o,i,h)*256+Z(u,y,6,o,i,h);if(d&-4||M>q+36||y+(M+9)*2*h>u.length+1)continue;let p=new Uint8Array(M+9);p.set([...x,d,M>>8,M&255]);for(let g=7;g<p.length;g++)p[g]=Z(u,y,g,o,i,h);if(yt(p.subarray(0,-2))===p.at(-2)*256+p.at(-1)){a=p;try{return{...await W(p,n),packet:p}}catch(g){throw(g.code==="passwordNeeded"||g.code==="badPassword")&&(g.packet=p),g}}}}e((f==="fast"?.15:.6)+(c+1)/Math.max(1,v.length)*.3)}}throw a?new w("invalidPacket"):new w("noMessage")}self.onmessage=async({data:t})=>{try{let r=t.packet?await W(new Uint8Array(t.packet),t.password):await mt(new Float32Array(t.samples),t.sampleRate,t.password,n=>self.postMessage({id:t.id,progress:n}));self.postMessage({id:t.id,result:r})}catch(r){self.postMessage({id:t.id,error:r.code||"unexpected",packet:r.packet})}};})();
+(() => {
+  // node_modules/fflate/esm/browser.js
+  var u8 = Uint8Array;
+  var u16 = Uint16Array;
+  var i32 = Int32Array;
+  var fleb = new u8([
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    1,
+    1,
+    1,
+    2,
+    2,
+    2,
+    2,
+    3,
+    3,
+    3,
+    3,
+    4,
+    4,
+    4,
+    4,
+    5,
+    5,
+    5,
+    5,
+    0,
+    /* unused */
+    0,
+    0,
+    /* impossible */
+    0
+  ]);
+  var fdeb = new u8([
+    0,
+    0,
+    0,
+    0,
+    1,
+    1,
+    2,
+    2,
+    3,
+    3,
+    4,
+    4,
+    5,
+    5,
+    6,
+    6,
+    7,
+    7,
+    8,
+    8,
+    9,
+    9,
+    10,
+    10,
+    11,
+    11,
+    12,
+    12,
+    13,
+    13,
+    /* unused */
+    0,
+    0
+  ]);
+  var clim = new u8([16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15]);
+  var freb = function(eb, start) {
+    var b = new u16(31);
+    for (var i2 = 0; i2 < 31; ++i2) {
+      b[i2] = start += 1 << eb[i2 - 1];
+    }
+    var r = new i32(b[30]);
+    for (var i2 = 1; i2 < 30; ++i2) {
+      for (var j = b[i2]; j < b[i2 + 1]; ++j) {
+        r[j] = j - b[i2] << 5 | i2;
+      }
+    }
+    return { b, r };
+  };
+  var _a = freb(fleb, 2);
+  var fl = _a.b;
+  var revfl = _a.r;
+  fl[28] = 258, revfl[258] = 28;
+  var _b = freb(fdeb, 0);
+  var fd = _b.b;
+  var revfd = _b.r;
+  var rev = new u16(32768);
+  for (i = 0; i < 32768; ++i) {
+    x = (i & 43690) >> 1 | (i & 21845) << 1;
+    x = (x & 52428) >> 2 | (x & 13107) << 2;
+    x = (x & 61680) >> 4 | (x & 3855) << 4;
+    rev[i] = ((x & 65280) >> 8 | (x & 255) << 8) >> 1;
+  }
+  var x;
+  var i;
+  var hMap = (function(cd, mb, r) {
+    var s = cd.length;
+    var i2 = 0;
+    var l = new u16(mb);
+    for (; i2 < s; ++i2) {
+      if (cd[i2])
+        ++l[cd[i2] - 1];
+    }
+    var le = new u16(mb);
+    for (i2 = 1; i2 < mb; ++i2) {
+      le[i2] = le[i2 - 1] + l[i2 - 1] << 1;
+    }
+    var co;
+    if (r) {
+      co = new u16(1 << mb);
+      var rvb = 15 - mb;
+      for (i2 = 0; i2 < s; ++i2) {
+        if (cd[i2]) {
+          var sv = i2 << 4 | cd[i2];
+          var r_1 = mb - cd[i2];
+          var v = le[cd[i2] - 1]++ << r_1;
+          for (var m = v | (1 << r_1) - 1; v <= m; ++v) {
+            co[rev[v] >> rvb] = sv;
+          }
+        }
+      }
+    } else {
+      co = new u16(s);
+      for (i2 = 0; i2 < s; ++i2) {
+        if (cd[i2]) {
+          co[i2] = rev[le[cd[i2] - 1]++] >> 15 - cd[i2];
+        }
+      }
+    }
+    return co;
+  });
+  var flt = new u8(288);
+  for (i = 0; i < 144; ++i)
+    flt[i] = 8;
+  var i;
+  for (i = 144; i < 256; ++i)
+    flt[i] = 9;
+  var i;
+  for (i = 256; i < 280; ++i)
+    flt[i] = 7;
+  var i;
+  for (i = 280; i < 288; ++i)
+    flt[i] = 8;
+  var i;
+  var fdt = new u8(32);
+  for (i = 0; i < 32; ++i)
+    fdt[i] = 5;
+  var i;
+  var flrm = /* @__PURE__ */ hMap(flt, 9, 1);
+  var fdrm = /* @__PURE__ */ hMap(fdt, 5, 1);
+  var max = function(a) {
+    var m = a[0];
+    for (var i2 = 1; i2 < a.length; ++i2) {
+      if (a[i2] > m)
+        m = a[i2];
+    }
+    return m;
+  };
+  var bits = function(d, p, m) {
+    var o = p / 8 | 0;
+    return (d[o] | d[o + 1] << 8) >> (p & 7) & m;
+  };
+  var bits16 = function(d, p) {
+    var o = p / 8 | 0;
+    return (d[o] | d[o + 1] << 8 | d[o + 2] << 16) >> (p & 7);
+  };
+  var shft = function(p) {
+    return (p + 7) / 8 | 0;
+  };
+  var slc = function(v, s, e) {
+    if (s == null || s < 0)
+      s = 0;
+    if (e == null || e > v.length)
+      e = v.length;
+    return new u8(v.subarray(s, e));
+  };
+  var ec = [
+    "unexpected EOF",
+    "invalid block type",
+    "invalid length/literal",
+    "invalid distance",
+    "stream finished",
+    "no stream handler",
+    ,
+    // determined by compression function
+    "no callback",
+    "invalid UTF-8 data",
+    "extra field too long",
+    "date not in range 1980-2099",
+    "filename too long",
+    "stream finishing",
+    "invalid zip data"
+    // determined by unknown compression method
+  ];
+  var err = function(ind, msg, nt) {
+    var e = new Error(msg || ec[ind]);
+    e.code = ind;
+    if (Error.captureStackTrace)
+      Error.captureStackTrace(e, err);
+    if (!nt)
+      throw e;
+    return e;
+  };
+  var inflt = function(dat, st, buf, dict) {
+    var sl = dat.length, dl = dict ? dict.length : 0;
+    if (!sl || st.f && !st.l)
+      return buf || new u8(0);
+    var noBuf = !buf;
+    var resize = noBuf || st.i != 2;
+    var noSt = st.i;
+    if (noBuf)
+      buf = new u8(sl * 3);
+    var cbuf = function(l2) {
+      var bl = buf.length;
+      if (l2 > bl) {
+        var nbuf = new u8(Math.max(bl * 2, l2));
+        nbuf.set(buf);
+        buf = nbuf;
+      }
+    };
+    var final = st.f || 0, pos = st.p || 0, bt = st.b || 0, lm = st.l, dm = st.d, lbt = st.m, dbt = st.n;
+    var tbts = sl * 8;
+    do {
+      if (!lm) {
+        final = bits(dat, pos, 1);
+        var type = bits(dat, pos + 1, 3);
+        pos += 3;
+        if (!type) {
+          var s = shft(pos) + 4, l = dat[s - 4] | dat[s - 3] << 8, t = s + l;
+          if (t > sl) {
+            if (noSt)
+              err(0);
+            break;
+          }
+          if (resize)
+            cbuf(bt + l);
+          buf.set(dat.subarray(s, t), bt);
+          st.b = bt += l, st.p = pos = t * 8, st.f = final;
+          continue;
+        } else if (type == 1)
+          lm = flrm, dm = fdrm, lbt = 9, dbt = 5;
+        else if (type == 2) {
+          var hLit = bits(dat, pos, 31) + 257, hcLen = bits(dat, pos + 10, 15) + 4;
+          var tl = hLit + bits(dat, pos + 5, 31) + 1;
+          pos += 14;
+          var ldt = new u8(tl);
+          var clt = new u8(19);
+          for (var i2 = 0; i2 < hcLen; ++i2) {
+            clt[clim[i2]] = bits(dat, pos + i2 * 3, 7);
+          }
+          pos += hcLen * 3;
+          var clb = max(clt), clbmsk = (1 << clb) - 1;
+          var clm = hMap(clt, clb, 1);
+          for (var i2 = 0; i2 < tl; ) {
+            var r = clm[bits(dat, pos, clbmsk)];
+            pos += r & 15;
+            var s = r >> 4;
+            if (s < 16) {
+              ldt[i2++] = s;
+            } else {
+              var c = 0, n = 0;
+              if (s == 16)
+                n = 3 + bits(dat, pos, 3), pos += 2, c = ldt[i2 - 1];
+              else if (s == 17)
+                n = 3 + bits(dat, pos, 7), pos += 3;
+              else if (s == 18)
+                n = 11 + bits(dat, pos, 127), pos += 7;
+              while (n--)
+                ldt[i2++] = c;
+            }
+          }
+          var lt = ldt.subarray(0, hLit), dt = ldt.subarray(hLit);
+          lbt = max(lt);
+          dbt = max(dt);
+          lm = hMap(lt, lbt, 1);
+          dm = hMap(dt, dbt, 1);
+        } else
+          err(1);
+        if (pos > tbts) {
+          if (noSt)
+            err(0);
+          break;
+        }
+      }
+      if (resize)
+        cbuf(bt + 131072);
+      var lms = (1 << lbt) - 1, dms = (1 << dbt) - 1;
+      var lpos = pos;
+      for (; ; lpos = pos) {
+        var c = lm[bits16(dat, pos) & lms], sym = c >> 4;
+        pos += c & 15;
+        if (pos > tbts) {
+          if (noSt)
+            err(0);
+          break;
+        }
+        if (!c)
+          err(2);
+        if (sym < 256)
+          buf[bt++] = sym;
+        else if (sym == 256) {
+          lpos = pos, lm = null;
+          break;
+        } else {
+          var add = sym - 254;
+          if (sym > 264) {
+            var i2 = sym - 257, b = fleb[i2];
+            add = bits(dat, pos, (1 << b) - 1) + fl[i2];
+            pos += b;
+          }
+          var d = dm[bits16(dat, pos) & dms], dsym = d >> 4;
+          if (!d)
+            err(3);
+          pos += d & 15;
+          var dt = fd[dsym];
+          if (dsym > 3) {
+            var b = fdeb[dsym];
+            dt += bits16(dat, pos) & (1 << b) - 1, pos += b;
+          }
+          if (pos > tbts) {
+            if (noSt)
+              err(0);
+            break;
+          }
+          if (resize)
+            cbuf(bt + 131072);
+          var end = bt + add;
+          if (bt < dt) {
+            var shift = dl - dt, dend = Math.min(dt, end);
+            if (shift + bt < 0)
+              err(3);
+            for (; bt < dend; ++bt)
+              buf[bt] = dict[shift + bt];
+          }
+          for (; bt < end; ++bt)
+            buf[bt] = buf[bt - dt];
+        }
+      }
+      st.l = lm, st.p = lpos, st.b = bt, st.f = final;
+      if (lm)
+        final = 1, st.m = lbt, st.d = dm, st.n = dbt;
+    } while (!final);
+    return bt != buf.length && noBuf ? slc(buf, 0, bt) : buf.subarray(0, bt);
+  };
+  var et = /* @__PURE__ */ new u8(0);
+  function inflateSync(data, opts) {
+    return inflt(data, { i: 2 }, opts && opts.out, opts && opts.dictionary);
+  }
+  var td = typeof TextDecoder != "undefined" && /* @__PURE__ */ new TextDecoder();
+  var tds = 0;
+  try {
+    td.decode(et, { stream: true });
+    tds = 1;
+  } catch (e) {
+  }
+
+  // src/codec.mjs
+  var SAMPLE_RATE = 48e3;
+  var MAX_TEXT_BYTES = 2e3;
+  var MAX_AUDIO_SECONDS = 120;
+  var MAX_FILE_BYTES = 25 * 1024 * 1024;
+  var PROFILES = Object.freeze({
+    fast: { id: 1, symbolSeconds: 0.022, frequencies: Array.from({ length: 16 }, (_, i2) => 1e3 + i2 * 400), preamble: 7800, marker: 600, amplitude: 0.68 },
+    hidden: { id: 2, symbolSeconds: 0.026, frequencies: Array.from({ length: 16 }, (_, i2) => 14500 + i2 * 280), preamble: 19300, marker: 13600, amplitude: 0.055 }
+  });
+  var encoder = new TextEncoder();
+  var CodecError = class extends Error {
+    constructor(code) {
+      super(code);
+      this.name = "CodecError";
+      this.code = code;
+    }
+  };
+  function crc16(bytes) {
+    let crc = 65535;
+    for (const byte of bytes) {
+      crc ^= byte << 8;
+      for (let j = 0; j < 8; j++) crc = crc & 32768 ? (crc << 1 ^ 4129) & 65535 : crc << 1 & 65535;
+    }
+    return crc;
+  }
+  async function deriveKey(password, salt, usage) {
+    if (!globalThis.crypto?.subtle) throw new CodecError("cryptoUnavailable");
+    const base = await crypto.subtle.importKey("raw", encoder.encode(password), "PBKDF2", false, ["deriveKey"]);
+    return crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 1e5, hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, [usage]);
+  }
+  async function unpackPacket(packet, password = "") {
+    if (packet.length < 9 || packet[0] !== 83 || packet[1] !== 81 || packet[2] !== 3 || ![1, 2].includes(packet[3]) || packet[4] & ~3) throw new CodecError("invalidPacket");
+    const length = packet[5] * 256 + packet[6];
+    if (length > MAX_TEXT_BYTES + 36 || packet.length !== 9 + length || crc16(packet.subarray(0, -2)) !== packet.at(-2) * 256 + packet.at(-1)) throw new CodecError("invalidPacket");
+    let data = packet.slice(7, -2);
+    if (packet[4] & 1) {
+      if (!password) throw new CodecError("passwordNeeded");
+      if (data.length < 36) throw new CodecError("invalidPacket");
+      const key = await deriveKey(password, data.subarray(0, 8), "decrypt");
+      try {
+        data = new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv: data.subarray(8, 20) }, key, data.subarray(20)));
+      } catch {
+        throw new CodecError("badPassword");
+      }
+    }
+    if (packet[4] & 2) {
+      try {
+        data = inflateSync(data, { out: new Uint8Array(MAX_TEXT_BYTES + 1) });
+      } catch {
+        throw new CodecError("invalidPacket");
+      }
+    }
+    if (data.length > MAX_TEXT_BYTES) throw new CodecError("messageTooLong");
+    try {
+      return { text: new TextDecoder("utf-8", { fatal: true }).decode(data), profile: packet[3] === 1 ? "fast" : "hidden" };
+    } catch {
+      throw new CodecError("invalidPacket");
+    }
+  }
+  function resample(samples, sourceRate, targetRate = SAMPLE_RATE) {
+    if (sourceRate === targetRate) return samples;
+    const result = new Float32Array(Math.round(samples.length * targetRate / sourceRate));
+    for (let i2 = 0; i2 < result.length; i2++) {
+      const index = i2 * sourceRate / targetRate, low = Math.floor(index), frac = index - low;
+      result[i2] = (samples[low] ?? 0) * (1 - frac) + (samples[Math.min(low + 1, samples.length - 1)] ?? 0) * frac;
+    }
+    return result;
+  }
+  function power(samples, start, length, frequency, sampleRate) {
+    const coefficient = 2 * Math.cos(2 * Math.PI * frequency / sampleRate);
+    let a = 0, b = 0;
+    const end = Math.min(samples.length, start + length);
+    for (let i2 = Math.max(0, start); i2 < end; i2++) {
+      const next = samples[i2] + coefficient * a - b;
+      b = a;
+      a = next;
+    }
+    return Math.max(0, a * a + b * b - coefficient * a * b);
+  }
+  function readSymbol(samples, start, length, profile, sampleRate) {
+    let best = -1, symbol = 0;
+    for (let i2 = 0; i2 < 16; i2++) {
+      const score = power(samples, start, length, profile.frequencies[i2], sampleRate);
+      if (score > best) {
+        best = score;
+        symbol = i2;
+      }
+    }
+    return symbol;
+  }
+  function byteAt(samples, start, index, profile, sampleRate, symbolLength) {
+    const length = Math.floor(symbolLength * 0.68), margin = symbolLength * 0.16;
+    const hi = readSymbol(samples, Math.round(start + index * 2 * symbolLength + margin), length, profile, sampleRate);
+    const lo = readSymbol(samples, Math.round(start + (index * 2 + 1) * symbolLength + margin), length, profile, sampleRate);
+    return hi << 4 | lo;
+  }
+  function highPass(samples, sampleRate, cutoff) {
+    const omega = 2 * Math.PI * cutoff / sampleRate, cos = Math.cos(omega), alpha = Math.sin(omega) / Math.SQRT2;
+    const a0 = 1 + alpha, b0 = (1 + cos) / 2 / a0, b1 = -(1 + cos) / a0, b2 = b0;
+    const a1 = -2 * cos / a0, a2 = (1 - alpha) / a0;
+    let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+    const out = new Float32Array(samples.length);
+    for (let i2 = 0; i2 < samples.length; i2++) {
+      const y = b0 * samples[i2] + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
+      out[i2] = y;
+      x2 = x1;
+      x1 = samples[i2];
+      y2 = y1;
+      y1 = y;
+    }
+    return out;
+  }
+  function markerCandidates(samples, sampleRate, profile) {
+    const window = Math.round(0.024 * sampleRate), step = Math.round(8e-3 * sampleRate);
+    const groups = [];
+    let group = null;
+    for (let start = 0; start + window <= samples.length; start += step) {
+      let energy = 0;
+      for (let i2 = start; i2 < start + window; i2++) energy += samples[i2] * samples[i2];
+      const tone = energy > 1e-10 ? power(samples, start, window, profile.marker, sampleRate) / (energy * window) : 0;
+      if (tone > 0.1) {
+        if (!group) group = { first: start, last: start, score: tone };
+        group.last = start;
+        group.score = Math.max(tone, group.score);
+      } else if (group) {
+        groups.push(group);
+        group = null;
+      }
+    }
+    if (group) groups.push(group);
+    return groups.filter((g) => (g.last - g.first) / sampleRate >= 0.032).sort((a, b) => b.score - a.score).slice(0, 48).map((g) => ({ start: g.last + window / 2 + 0.05 * sampleRate, score: g.score }));
+  }
+  async function decodeSamples(input, sampleRate, password = "", onProgress = () => {
+  }) {
+    if (!input.length || input.length / sampleRate > MAX_AUDIO_SECONDS + 0.1) throw new CodecError("audioTooLong");
+    if (sampleRate < 16e3) throw new CodecError("sampleRateLow");
+    let foundPacket = null;
+    for (const [name, p] of Object.entries(PROFILES)) {
+      if (sampleRate / 2 <= p.preamble + 100) continue;
+      const sr = name === "fast" && sampleRate > 24e3 ? 24e3 : sampleRate;
+      let samples = sr === sampleRate ? input : resample(input, sampleRate, sr);
+      if (name === "hidden") samples = highPass(samples, sr, 12e3);
+      const candidates = markerCandidates(samples, sr, p);
+      onProgress(name === "fast" ? 0.15 : 0.6);
+      for (let c = 0; c < candidates.length; c++) {
+        for (const clock of [1, 0.9975, 1.0025, 0.995, 1.005]) {
+          const symbolLength = Math.floor(p.symbolSeconds * SAMPLE_RATE) * sr / SAMPLE_RATE * clock;
+          for (let delta = -0.036 * sr; delta <= 0.044 * sr; delta += Math.max(1, Math.round(8e-4 * sr))) {
+            const start = Math.round(candidates[c].start + delta);
+            if (start < 0 || start + 18 * symbolLength > samples.length) continue;
+            const prefix = [83, 81, 3, p.id];
+            let valid = true;
+            for (let i2 = 0; i2 < prefix.length; i2++) if (byteAt(samples, start, i2, p, sr, symbolLength) !== prefix[i2]) {
+              valid = false;
+              break;
+            }
+            if (!valid) continue;
+            const flags = byteAt(samples, start, 4, p, sr, symbolLength);
+            const length = byteAt(samples, start, 5, p, sr, symbolLength) * 256 + byteAt(samples, start, 6, p, sr, symbolLength);
+            if (flags & ~3 || length > MAX_TEXT_BYTES + 36 || start + (length + 9) * 2 * symbolLength > samples.length + 1) continue;
+            const packet = new Uint8Array(length + 9);
+            packet.set([...prefix, flags, length >> 8, length & 255]);
+            for (let i2 = 7; i2 < packet.length; i2++) packet[i2] = byteAt(samples, start, i2, p, sr, symbolLength);
+            if (crc16(packet.subarray(0, -2)) !== packet.at(-2) * 256 + packet.at(-1)) continue;
+            foundPacket = packet;
+            try {
+              return { ...await unpackPacket(packet, password), packet };
+            } catch (error) {
+              if (error.code === "passwordNeeded" || error.code === "badPassword") {
+                error.packet = packet;
+                throw error;
+              }
+              throw error;
+            }
+          }
+        }
+        onProgress((name === "fast" ? 0.15 : 0.6) + (c + 1) / Math.max(1, candidates.length) * 0.3);
+      }
+    }
+    if (foundPacket) throw new CodecError("invalidPacket");
+    throw new CodecError("noMessage");
+  }
+
+  // src/decoder.worker.mjs
+  self.onmessage = async ({ data }) => {
+    try {
+      const result = data.packet ? await unpackPacket(new Uint8Array(data.packet), data.password) : await decodeSamples(new Float32Array(data.samples), data.sampleRate, data.password, (progress) => self.postMessage({ id: data.id, progress }));
+      self.postMessage({ id: data.id, result });
+    } catch (error) {
+      self.postMessage({ id: data.id, error: error.code || "unexpected", packet: error.packet });
+    }
+  };
+})();

@@ -1,10 +1,18 @@
-# SonicQR Chrome · نسخهٔ آزمایشی ۰٫۲٫۰
+# SonicQR Chrome · نسخهٔ آزمایشی ۰٫۳٫۰
 
 افزونه‌ای مستقل برای نوشتن متن کوتاه، ترکیب سیگنال متن با وویس، و خواندن متن از وویس. **برای نصب، بیلد یا GitHub Actions لازم نیست**؛ فایل‌های آمادهٔ افزونه در همین پوشه هستند. سورس و تست‌ها هم همراه آن‌اند. این ZIP پروژهٔ اندروید/ویندوز را تغییر نمی‌دهد.
 
+## انتشار و GitHub Actions
+
+این ZIP **سورس پروژه** است. فایل جداگانهٔ `SonicQR-Chrome-WebStore.zip` برای آپلود فروشگاه است. دستور `npm run package` بیلد، اعتبارسنجی و ساخت ZIP با manifest در ریشه را انجام می‌دهد. خروجی فقط فایل‌های اجرای افزونه را دارد؛ سورس، تست‌ها، recordings و node_modules وارد آن نمی‌شوند.
+
+راهنمای گام‌به‌گام فارسی در `PUBLISHING.md` است. متن فرم‌ها در `STORE_LISTING.md`، دستورهای بررسی در `REVIEWER_NOTES.md` و تصاویر آماده در `store-assets` هستند. سیاست حریم خصوصی فارسی/انگلیسی در `privacy.html` است؛ این فایل و `privacy.css` را روی هاست عمومی قرار بده و URL واقعی آن را در فروشگاه ثبت کن.
+
+`.github/workflows/build.yml` را همراه بقیهٔ فایل‌ها در ریشهٔ repository قرار بده. با Push یا Run workflow بیلد و تست‌ها انجام می‌شوند و ZIP آمادهٔ فروشگاه به‌صورت دانلود مستقیم در Artifacts ظاهر می‌شود. هیچ Secret یا کلید امضایی لازم نیست. این workflow فقط بسته می‌سازد؛ حساب فروشگاه، فرم‌ها و انتشار نهایی با خود ناشر است.
+
 ## به‌روزرسانی از نسخهٔ قبلی
 
-فایل‌های این ZIP را جایگزین پوشهٔ قبلی کن و در `chrome://extensions` روی **Reload** افزونه بزن. **تب پیام‌رسان و صفحهٔ آزمایش داخلی را هم دوباره بارگذاری کن.** بالای پنل باید `Beta 0.2.0` دیده شود. کد ترکیبِ نسخهٔ قبلی در تب بازشده باقی می‌ماند و بدون بارگذاری مجدد قابل جایگزینی امن نیست.
+فایل‌های این ZIP را جایگزین پوشهٔ قبلی کن و در `chrome://extensions` روی **Reload** افزونه بزن. **تب پیام‌رسان و صفحهٔ آزمایش داخلی را هم دوباره بارگذاری کن.** بالای پنل باید `Beta 0.3.0` دیده شود. کد ترکیبِ نسخهٔ قبلی در تب بازشده باقی می‌ماند و بدون بارگذاری مجدد قابل جایگزینی امن نیست.
 
 این نسخه ورودی `getUserMedia`، ضبط استاندارد `MediaRecorder` و مصرف صوت در `Web Audio` را پوشش می‌دهد. شروع سیگنال تا اتصال مصرف‌کنندهٔ صوت صبر می‌کند، تا سایت‌هایی که میکروفون را زودتر آماده می‌کنند، ابتدای پیام را از دست ندهند. خطای مجوز یا معلق‌بودن صدا در وضعیت افزونه دیده می‌شود؛ در مسیر هم‌زمانِ ضبط استاندارد، اگر صدا معلق باشد ورودی اصلی سایت حفظ می‌شود.
 
@@ -94,4 +102,4 @@ npm run test:browser
 
 ## English quick start
 
-Extract ZIP → `chrome://extensions` → Developer mode → Load unpacked → select the folder containing `manifest.json`. Pin SonicQR. Click its icon on your messenger's web tab. Run the built-in recording test first. Create a short **audible** signal, arm mixing, then record a voice message on the site until the signal finishes. Send it yourself. The recipient reads the downloaded audio file or captures the playing tab. Version 0.2.0 covers microphone input, MediaRecorder and Web Audio consumers. If the site is already recording but the mixed input is still waiting, use the manual signal-start button. Reload both the extension and site after an update. Native apps, arbitrary frames, other capture paths and preservation after messenger recompression are not guaranteed.
+Extract ZIP → `chrome://extensions` → Developer mode → Load unpacked → select the folder containing `manifest.json`. Pin SonicQR. Click its icon on your messenger's web tab. Run the built-in recording test first. Create a short **audible** signal, arm mixing, then record a voice message on the site until the signal finishes. Send it yourself. The recipient reads the downloaded audio file or captures the playing tab. Version 0.3.0 covers microphone input, MediaRecorder and Web Audio consumers. If the site is already recording but the mixed input is still waiting, use the manual signal-start button. Reload both the extension and site after an update. Native apps, arbitrary frames, other capture paths and preservation after messenger recompression are not guaranteed.

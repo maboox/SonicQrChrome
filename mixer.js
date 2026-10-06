@@ -1,1 +1,393 @@
-(()=>{var m=48e3;var Z=25*1024*1024,B=Object.freeze({fast:{id:1,symbolSeconds:.022,frequencies:Array.from({length:16},(w,a)=>1e3+a*400),preamble:7800,marker:600,amplitude:.68},hidden:{id:2,symbolSeconds:.026,frequencies:Array.from({length:16},(w,a)=>14500+a*280),preamble:19300,marker:13600,amplitude:.055}}),$=new TextEncoder,C=class extends Error{constructor(a){super(a),this.name="CodecError",this.code=a}};function Y(w){let a=65535;for(let g of w){a^=g<<8;for(let p=0;p<8;p++)a=a&32768?(a<<1^4129)&65535:a<<1&65535}return a}function _(w,a,g,p,d){let v=Math.min(150,Math.floor(g/7));for(let i=0;i<g;i++){let f=Math.min(1,i/v,(g-1-i)/v);w[a+i]=Math.sin(2*Math.PI*p*i/m)*d*f}}function O(w,a="fast",g){let p=B[a];if(!p)throw new C("invalidPacket");let d=Math.floor(p.symbolSeconds*m),v=Math.round(.36*m),i=new Float32Array(v+w.length*2*d+Math.round(.06*m)),f=g??p.amplitude;_(i,0,Math.round(.16*m),p.preamble,f),_(i,Math.round(.21*m),Math.round(.1*m),p.marker,f);let c=v;for(let E of w)_(i,c,d,p.frequencies[E>>4],f),c+=d,_(i,c,d,p.frequencies[E&15],f),c+=d;return i}var q="__sonicQRMixerV2__";!globalThis[q]&&globalThis.AudioContext&&navigator.mediaDevices?.getUserMedia&&(globalThis.__sonicQRMixerV1__?(globalThis.__sonicQRMixerV1__.disarm(),Object.defineProperty(globalThis,q,{value:Object.freeze({version:2,arm(){throw new Error("reloadRequired")},disarm(){return this.status()},status(){return{phase:"error",detail:"reloadRequired",active:!1,version:2}}})})):J());function J(){let w=navigator.mediaDevices.getUserMedia,a=AudioContext.prototype.createMediaStreamSource,g=globalThis.MediaRecorder,p=g?.prototype.start,d=new Set,v=new WeakMap,i=null,f=null,c=null,E=null,z=0,G=0,s={phase:"idle",duration:0,elapsed:0,detail:""},I=e=>e instanceof MediaStream&&e.getAudioTracks().length&&!e.getVideoTracks().length&&!e.getAudioTracks().some(t=>t.getSettings().displaySurface),k=e=>e?.getAudioTracks?.().map(t=>v.get(t)).find(t=>t&&!t.closed),F=e=>!e.closed&&(e.recording>0||e.tone&&!e.complete&&!e.interrupted),V=e=>e.startedAt==null?0:Math.max(0,Math.min(e.duration,e.context.currentTime-e.startedAt));function W(){c&&c.close().catch(()=>{}),c=null}function M(){i=null,clearTimeout(E),W()}function P(){return(!c||c.state==="closed")&&(c=new AudioContext({sampleRate:m})),c.resume().catch(()=>{}),c}function N(){c&&c.resume().catch(()=>{});for(let e of d)e.context.state==="suspended"&&e.context.resume().catch(()=>{})}addEventListener("pointerdown",N,!0),addEventListener("keydown",N,!0);function T(){i&&Date.now()>i.expiresAt&&(M(),s={...s,phase:"expired"});let e=f&&!f.closed?f:null;return{...e?.tone&&!e.complete&&!e.interrupted?{phase:e.context.state!=="running"?"blocked":e.startedAt==null?"waiting":"recording",duration:e.duration,elapsed:V(e),detail:e.context.state!=="running"?"audioBlocked":""}:s,active:[...d].some(F),version:2,route:e?.route||s.route||"",context:e?.context.state||c?.state||"",outputPeak:e?.peak||s.outputPeak||0,micRequests:z,recorderStarts:G}}function H(e){let t=Uint8Array.from(e?.packet||[]);if(!Array.isArray(e?.packet)||e.packet.some(n=>!Number.isInteger(n)||n<0||n>255)||t.length<9||t.length>2045||t[0]!==83||t[1]!==81||t[2]!==3||t[3]!==B[e.profile]?.id||t[4]&-4||t.length!==9+t[5]*256+t[6]||Y(t.subarray(0,-2))!==t.at(-2)*256+t.at(-1))throw new Error("invalidPacket");if(!Number.isFinite(e.amplitude)||e.amplitude<.025||e.amplitude>(e.profile==="hidden"?.12:.42))throw new Error("invalidPacket");return{packet:t,profile:e.profile,amplitude:e.amplitude,expiresAt:Date.now()+12e4}}function j(e,t){let n=O(t.packet,t.profile,t.amplitude),r=e.context.createBufferSource(),o=e.context.createBuffer(1,n.length,m);o.copyToChannel(n,0),r.buffer=o,r.connect(e.toneGain),e.tone=r,e.duration=n.length/m,e.startedAt=null,e.complete=!1,e.interrupted=!1,e.peak=0,f=e,s={phase:"waiting",duration:e.duration,elapsed:0,detail:"",route:e.route},r.onended=()=>{r.disconnect(),e.tone===r&&!e.closed&&!e.interrupted&&(e.complete=!0,s={phase:"complete",duration:e.duration,elapsed:e.duration,detail:"",route:e.route,outputPeak:e.peak})}}function D(e,t){if(!(!e||e.closed||e.startedAt!=null||e.interrupted||e.complete)){if(e.route=t,e.context.state!=="running"){s={...s,phase:"blocked",detail:"audioBlocked"};return}e.startedAt=e.context.currentTime+.25,e.tone.start(e.startedAt)}}function U(e){if(!(e.closed||e.complete||e.interrupted)){e.interrupted=!0;try{e.tone.stop()}catch{}e.tone.disconnect(),s={phase:"incomplete",duration:e.duration,elapsed:V(e),detail:"",route:e.route,outputPeak:e.peak}}}function b(e,t=!1){if(!e.closed){U(e),e.closed=!0,clearInterval(e.guard);for(let n of e.outputs)MediaStreamTrack.prototype.stop.call(n);t&&e.stream.getTracks().forEach(n=>n.stop());for(let n of[e.source,e.voice,e.toneGain,e.analyser])n.disconnect();e.context.close().catch(()=>{}),d.delete(e)}}function K(e,t){if(v.has(t))return;v.set(t,e),e.outputs.add(t);let n=t.stop.bind(t),r=t.clone.bind(t);t.stop=()=>{n(),e.outputs.delete(t),e.outputs.size||b(e,e.ownsInput)},t.clone=()=>{let o=r();return K(e,o),o},t.addEventListener("ended",()=>{e.outputs.delete(t),e.outputs.size||b(e,e.ownsInput)},{once:!0})}function Q(e,t){t.getAudioTracks().forEach(r=>K(e,r));let n=t.clone.bind(t);return t.clone=()=>{let r=n();return Q(e,r),r},t}function R(e,t,n){let r=c||P();c=null;try{let o=r.createMediaStreamDestination();o.channelCount=1;let l=a.call(r,e),h=r.createGain();h.gain.value=.56;let A=r.createGain(),x=r.createAnalyser();x.fftSize=1024,l.connect(h),h.connect(x),A.connect(x),x.connect(o);let u={context:r,output:o,source:l,voice:h,toneGain:A,analyser:x,stream:e,ownsInput:n,outputs:new Set,recording:0,closed:!1,route:"microphone",peak:0};d.add(u),Q(u,o.stream),j(u,t);let S=e.getAudioTracks(),X=new Float32Array(x.fftSize);return u.guard=setInterval(()=>{A.gain.value=S.some(y=>y.enabled&&y.readyState==="live")?1:0,x.getFloatTimeDomainData(X);for(let y of X)u.peak=Math.max(u.peak,Math.abs(y));for(let y of u.outputs)y.readyState==="ended"&&u.outputs.delete(y);u.outputs.size||b(u,u.ownsInput),S.some(y=>y.readyState==="live")||b(u)},80),S.forEach(y=>y.addEventListener("ended",()=>b(u),{once:!0})),u}catch(o){throw r.close().catch(()=>{}),o}}function L(e,t=!1){T();let n=k(e);if(!I(e))return null;if(!i)return n||null;let r=i;if(n)return j(n,r),M(),n;if(c?.state!=="running")return M(),s={phase:"error",detail:"audioBlocked",duration:0,elapsed:0},null;try{let o=R(e,r,t);return M(),o}catch(o){return M(),s={phase:"error",detail:o.message,duration:0,elapsed:0},null}}if(navigator.mediaDevices.getUserMedia=async function(e){let t=!!e?.audio&&!e.video&&!e.audio?.mandatory?.chromeMediaSource,n=t?i:null;t&&z++;let r;try{r=await w.call(this,e)}catch(h){throw n&&n===i&&(M(),s={phase:"error",duration:0,elapsed:0,detail:h.name}),h}if(!n||n!==i||!I(r))return r;let o=P();if(o.state!=="running"&&await Promise.race([o.resume().catch(()=>{}),new Promise(h=>setTimeout(h,1e3))]),n!==i)return r;let l=L(r,!0);return l?l.output.stream:r},AudioContext.prototype.createMediaStreamSource=function(e){let t=k(e),n=L(e),r=a.call(this,t?e:n?n.output.stream:e);if(n){let A=function(){h&&l.state==="running"&&D(n,"web-audio")},o=r.connect,l=this,h=!1;r.connect=function(...u){let S=o.apply(this,u);return h=!0,A(),S},l.addEventListener("statechange",A);let x=r.disconnect;r.disconnect=function(...u){let S=x.apply(this,u);return u.length||(h=!1,l.removeEventListener("statechange",A)),S}}return r},g){class e extends g{constructor(n,r){let o=k(n),l=L(n);try{super(o?n:l?l.output.stream:n,r)}catch(h){throw l&&!o&&b(l),h}}}g.prototype.start=function(...t){let n=k(this.stream);n&&i&&this.state==="inactive"&&(n=L(this.stream));let r=p.apply(this,t);if(G++,!n&&i&&I(this.stream)&&(s={...s,detail:"recorderUnmixed"}),n){n.recording++,D(n,"media-recorder");let o=()=>{this.removeEventListener("stop",o),this.removeEventListener("error",o),this.removeEventListener("pause",l),n.recording=Math.max(0,n.recording-1),U(n),n.ownsInput||b(n)},l=()=>U(n);this.addEventListener("stop",o),this.addEventListener("error",o),this.addEventListener("pause",l)}return r},globalThis.MediaRecorder=e}Object.defineProperty(globalThis,q,{value:Object.freeze({version:2,prepare(){return P(),T()},arm(e){if([...d].some(F))throw new Error("recordingBusy");let t=H(e);return clearTimeout(E),i=t,P(),f=null,s={phase:"armed",duration:O(t.packet,t.profile,t.amplitude).length/m,elapsed:0,detail:""},E=setTimeout(()=>{i&&(M(),s.phase="expired")},12e4),T()},disarm(){return M(),d.forEach(U),[...d].some(F)||(s={...s,phase:"idle",detail:""}),T()},startSignal(){if(!f||f.closed||!f.tone)throw new Error("noMixedStream");return D(f,"manual"),T()},status:T})}),addEventListener("pagehide",()=>{M(),d.forEach(e=>b(e,e.ownsInput))})}})();
+(() => {
+  // src/codec.mjs
+  var SAMPLE_RATE = 48e3;
+  var MAX_FILE_BYTES = 25 * 1024 * 1024;
+  var PROFILES = Object.freeze({
+    fast: { id: 1, symbolSeconds: 0.022, frequencies: Array.from({ length: 16 }, (_, i) => 1e3 + i * 400), preamble: 7800, marker: 600, amplitude: 0.68 },
+    hidden: { id: 2, symbolSeconds: 0.026, frequencies: Array.from({ length: 16 }, (_, i) => 14500 + i * 280), preamble: 19300, marker: 13600, amplitude: 0.055 }
+  });
+  var encoder = new TextEncoder();
+  var CodecError = class extends Error {
+    constructor(code) {
+      super(code);
+      this.name = "CodecError";
+      this.code = code;
+    }
+  };
+  function crc16(bytes) {
+    let crc = 65535;
+    for (const byte of bytes) {
+      crc ^= byte << 8;
+      for (let j = 0; j < 8; j++) crc = crc & 32768 ? (crc << 1 ^ 4129) & 65535 : crc << 1 & 65535;
+    }
+    return crc;
+  }
+  function writeTone(out, start, count, frequency, amplitude) {
+    const fade = Math.min(150, Math.floor(count / 7));
+    for (let i = 0; i < count; i++) {
+      const envelope = Math.min(1, i / fade, (count - 1 - i) / fade);
+      out[start + i] = Math.sin(2 * Math.PI * frequency * i / SAMPLE_RATE) * amplitude * envelope;
+    }
+  }
+  function modulate(packet, profileName = "fast", amplitude) {
+    const p = PROFILES[profileName];
+    if (!p) throw new CodecError("invalidPacket");
+    const symbolLength = Math.floor(p.symbolSeconds * SAMPLE_RATE);
+    const dataStart = Math.round(0.36 * SAMPLE_RATE);
+    const out = new Float32Array(dataStart + packet.length * 2 * symbolLength + Math.round(0.06 * SAMPLE_RATE));
+    const amp = amplitude ?? p.amplitude;
+    writeTone(out, 0, Math.round(0.16 * SAMPLE_RATE), p.preamble, amp);
+    writeTone(out, Math.round(0.21 * SAMPLE_RATE), Math.round(0.1 * SAMPLE_RATE), p.marker, amp);
+    let position = dataStart;
+    for (const byte of packet) {
+      writeTone(out, position, symbolLength, p.frequencies[byte >> 4], amp);
+      position += symbolLength;
+      writeTone(out, position, symbolLength, p.frequencies[byte & 15], amp);
+      position += symbolLength;
+    }
+    return out;
+  }
+
+  // src/mixer.mjs
+  var KEY = "__sonicQRMixerV2__";
+  if (!globalThis[KEY] && globalThis.AudioContext && navigator.mediaDevices?.getUserMedia) {
+    if (globalThis.__sonicQRMixerV1__) {
+      globalThis.__sonicQRMixerV1__.disarm();
+      Object.defineProperty(globalThis, KEY, { value: Object.freeze({ version: 2, arm() {
+        throw new Error("reloadRequired");
+      }, disarm() {
+        return this.status();
+      }, status() {
+        return { phase: "error", detail: "reloadRequired", active: false, version: 2 };
+      } }) });
+    } else install();
+  }
+  function install() {
+    const nativeGUM = navigator.mediaDevices.getUserMedia;
+    const nativeSource = AudioContext.prototype.createMediaStreamSource;
+    const NativeRecorder = globalThis.MediaRecorder;
+    const nativeStart = NativeRecorder?.prototype.start;
+    const sessions = /* @__PURE__ */ new Set(), tracks = /* @__PURE__ */ new WeakMap();
+    let armed = null, latest = null, prepared = null, expires = null;
+    let micRequests = 0, recorderStarts = 0;
+    let last = { phase: "idle", duration: 0, elapsed: 0, detail: "" };
+    const isMic = (stream) => stream instanceof MediaStream && stream.getAudioTracks().length && !stream.getVideoTracks().length && !stream.getAudioTracks().some((t) => t.getSettings().displaySurface);
+    const sessionFor = (stream) => stream?.getAudioTracks?.().map((t) => tracks.get(t)).find((s) => s && !s.closed);
+    const active = (s) => !s.closed && (s.recording > 0 || s.tone && !s.complete && !s.interrupted);
+    const elapsed = (s) => s.startedAt == null ? 0 : Math.max(0, Math.min(s.duration, s.context.currentTime - s.startedAt));
+    function closePrepared() {
+      if (prepared) void prepared.close().catch(() => {
+      });
+      prepared = null;
+    }
+    function clearArm() {
+      armed = null;
+      clearTimeout(expires);
+      closePrepared();
+    }
+    function prepare() {
+      if (!prepared || prepared.state === "closed") prepared = new AudioContext({ sampleRate: SAMPLE_RATE });
+      void prepared.resume().catch(() => {
+      });
+      return prepared;
+    }
+    function unlock() {
+      if (prepared) void prepared.resume().catch(() => {
+      });
+      for (const s of sessions) if (s.context.state === "suspended") void s.context.resume().catch(() => {
+      });
+    }
+    addEventListener("pointerdown", unlock, true);
+    addEventListener("keydown", unlock, true);
+    function snapshot() {
+      if (armed && Date.now() > armed.expiresAt) {
+        clearArm();
+        last = { ...last, phase: "expired" };
+      }
+      const s = latest && !latest.closed ? latest : null;
+      const pending = s?.tone && !s.complete && !s.interrupted;
+      const progress = pending ? { phase: s.context.state !== "running" ? "blocked" : s.startedAt == null ? "waiting" : "recording", duration: s.duration, elapsed: elapsed(s), detail: s.context.state !== "running" ? "audioBlocked" : "" } : last;
+      return { ...progress, active: [...sessions].some(active), version: 2, route: s?.route || last.route || "", context: s?.context.state || prepared?.state || "", outputPeak: s?.peak || last.outputPeak || 0, micRequests, recorderStarts };
+    }
+    function validate(config) {
+      const p = Uint8Array.from(config?.packet || []);
+      if (!Array.isArray(config?.packet) || config.packet.some((x) => !Number.isInteger(x) || x < 0 || x > 255) || p.length < 9 || p.length > 2045 || p[0] !== 83 || p[1] !== 81 || p[2] !== 3 || p[3] !== PROFILES[config.profile]?.id || p[4] & ~3 || p.length !== 9 + p[5] * 256 + p[6] || crc16(p.subarray(0, -2)) !== p.at(-2) * 256 + p.at(-1)) throw new Error("invalidPacket");
+      if (!Number.isFinite(config.amplitude) || config.amplitude < 0.025 || config.amplitude > (config.profile === "hidden" ? 0.12 : 0.42)) throw new Error("invalidPacket");
+      return { packet: p, profile: config.profile, amplitude: config.amplitude, expiresAt: Date.now() + 12e4 };
+    }
+    function attachTone(s, config) {
+      const samples = modulate(config.packet, config.profile, config.amplitude);
+      const tone = s.context.createBufferSource();
+      const buffer = s.context.createBuffer(1, samples.length, SAMPLE_RATE);
+      buffer.copyToChannel(samples, 0);
+      tone.buffer = buffer;
+      tone.connect(s.toneGain);
+      s.tone = tone;
+      s.duration = samples.length / SAMPLE_RATE;
+      s.startedAt = null;
+      s.complete = false;
+      s.interrupted = false;
+      s.peak = 0;
+      latest = s;
+      last = { phase: "waiting", duration: s.duration, elapsed: 0, detail: "", route: s.route };
+      tone.onended = () => {
+        tone.disconnect();
+        if (s.tone === tone && !s.closed && !s.interrupted) {
+          s.complete = true;
+          last = { phase: "complete", duration: s.duration, elapsed: s.duration, detail: "", route: s.route, outputPeak: s.peak };
+        }
+      };
+    }
+    function startTone(s, route) {
+      if (!s || s.closed || s.startedAt != null || s.interrupted || s.complete) return;
+      s.route = route;
+      if (s.context.state !== "running") {
+        last = { ...last, phase: "blocked", detail: "audioBlocked" };
+        return;
+      }
+      s.startedAt = s.context.currentTime + 0.25;
+      s.tone.start(s.startedAt);
+    }
+    function interrupt(s) {
+      if (s.closed || s.complete || s.interrupted) return;
+      s.interrupted = true;
+      try {
+        s.tone.stop();
+      } catch {
+      }
+      s.tone.disconnect();
+      last = { phase: "incomplete", duration: s.duration, elapsed: elapsed(s), detail: "", route: s.route, outputPeak: s.peak };
+    }
+    function cleanup(s, stopInputs = false) {
+      if (s.closed) return;
+      interrupt(s);
+      s.closed = true;
+      clearInterval(s.guard);
+      for (const t of s.outputs) MediaStreamTrack.prototype.stop.call(t);
+      if (stopInputs) s.stream.getTracks().forEach((t) => t.stop());
+      for (const node of [s.source, s.voice, s.toneGain, s.analyser]) node.disconnect();
+      void s.context.close().catch(() => {
+      });
+      sessions.delete(s);
+    }
+    function registerTrack(s, track) {
+      if (tracks.has(track)) return;
+      tracks.set(track, s);
+      s.outputs.add(track);
+      const stop = track.stop.bind(track), clone = track.clone.bind(track);
+      track.stop = () => {
+        stop();
+        s.outputs.delete(track);
+        if (!s.outputs.size) cleanup(s, s.ownsInput);
+      };
+      track.clone = () => {
+        const t = clone();
+        registerTrack(s, t);
+        return t;
+      };
+      track.addEventListener("ended", () => {
+        s.outputs.delete(track);
+        if (!s.outputs.size) cleanup(s, s.ownsInput);
+      }, { once: true });
+    }
+    function registerStream(s, stream) {
+      stream.getAudioTracks().forEach((t) => registerTrack(s, t));
+      const clone = stream.clone.bind(stream);
+      stream.clone = () => {
+        const copy = clone();
+        registerStream(s, copy);
+        return copy;
+      };
+      return stream;
+    }
+    function buildMix(stream, config, ownsInput) {
+      const context = prepared || prepare();
+      prepared = null;
+      try {
+        const output = context.createMediaStreamDestination();
+        output.channelCount = 1;
+        const source = nativeSource.call(context, stream);
+        const voice = context.createGain();
+        voice.gain.value = 0.56;
+        const toneGain = context.createGain(), analyser = context.createAnalyser();
+        analyser.fftSize = 1024;
+        source.connect(voice);
+        voice.connect(analyser);
+        toneGain.connect(analyser);
+        analyser.connect(output);
+        const s = { context, output, source, voice, toneGain, analyser, stream, ownsInput, outputs: /* @__PURE__ */ new Set(), recording: 0, closed: false, route: "microphone", peak: 0 };
+        sessions.add(s);
+        registerStream(s, output.stream);
+        attachTone(s, config);
+        const inputs = stream.getAudioTracks(), meter = new Float32Array(analyser.fftSize);
+        s.guard = setInterval(() => {
+          toneGain.gain.value = inputs.some((t) => t.enabled && t.readyState === "live") ? 1 : 0;
+          analyser.getFloatTimeDomainData(meter);
+          for (const v of meter) s.peak = Math.max(s.peak, Math.abs(v));
+          for (const t of s.outputs) if (t.readyState === "ended") s.outputs.delete(t);
+          if (!s.outputs.size) cleanup(s, s.ownsInput);
+          if (!inputs.some((t) => t.readyState === "live")) cleanup(s);
+        }, 80);
+        inputs.forEach((t) => t.addEventListener("ended", () => cleanup(s), { once: true }));
+        return s;
+      } catch (error) {
+        void context.close().catch(() => {
+        });
+        throw error;
+      }
+    }
+    function consume(stream, ownsInput = false) {
+      snapshot();
+      const previous = sessionFor(stream);
+      if (!isMic(stream)) return null;
+      if (!armed) return previous || null;
+      const config = armed;
+      if (previous) {
+        attachTone(previous, config);
+        clearArm();
+        return previous;
+      }
+      if (prepared?.state !== "running") {
+        clearArm();
+        last = { phase: "error", detail: "audioBlocked", duration: 0, elapsed: 0 };
+        return null;
+      }
+      try {
+        const s = buildMix(stream, config, ownsInput);
+        clearArm();
+        return s;
+      } catch (error) {
+        clearArm();
+        last = { phase: "error", detail: error.message, duration: 0, elapsed: 0 };
+        return null;
+      }
+    }
+    navigator.mediaDevices.getUserMedia = async function(constraints) {
+      const eligible = !!constraints?.audio && !constraints.video && !constraints.audio?.mandatory?.chromeMediaSource;
+      const requestedArm = eligible ? armed : null;
+      if (eligible) micRequests++;
+      let stream;
+      try {
+        stream = await nativeGUM.call(this, constraints);
+      } catch (error) {
+        if (requestedArm && requestedArm === armed) {
+          clearArm();
+          last = { phase: "error", duration: 0, elapsed: 0, detail: error.name };
+        }
+        throw error;
+      }
+      if (!requestedArm || requestedArm !== armed || !isMic(stream)) return stream;
+      const context = prepare();
+      if (context.state !== "running") await Promise.race([context.resume().catch(() => {
+      }), new Promise((r) => setTimeout(r, 1e3))]);
+      if (requestedArm !== armed) return stream;
+      const s = consume(stream, true);
+      return s ? s.output.stream : stream;
+    };
+    AudioContext.prototype.createMediaStreamSource = function(stream) {
+      const existing = sessionFor(stream), s = consume(stream);
+      const node = nativeSource.call(this, existing ? stream : s ? s.output.stream : stream);
+      if (s) {
+        let begin = function() {
+          if (connected && context.state === "running") startTone(s, "web-audio");
+        };
+        const connect = node.connect, context = this;
+        let connected = false;
+        node.connect = function(...args) {
+          const result = connect.apply(this, args);
+          connected = true;
+          begin();
+          return result;
+        };
+        context.addEventListener("statechange", begin);
+        const disconnect = node.disconnect;
+        node.disconnect = function(...args) {
+          const result = disconnect.apply(this, args);
+          if (!args.length) {
+            connected = false;
+            context.removeEventListener("statechange", begin);
+          }
+          return result;
+        };
+      }
+      return node;
+    };
+    if (NativeRecorder) {
+      class VoiceRecorder extends NativeRecorder {
+        constructor(stream, options) {
+          const existing = sessionFor(stream), s = consume(stream);
+          try {
+            super(existing ? stream : s ? s.output.stream : stream, options);
+          } catch (error) {
+            if (s && !existing) cleanup(s);
+            throw error;
+          }
+        }
+      }
+      NativeRecorder.prototype.start = function(...args) {
+        let s = sessionFor(this.stream);
+        if (s && armed && this.state === "inactive") s = consume(this.stream);
+        const result = nativeStart.apply(this, args);
+        recorderStarts++;
+        if (!s && armed && isMic(this.stream)) last = { ...last, detail: "recorderUnmixed" };
+        if (s) {
+          s.recording++;
+          startTone(s, "media-recorder");
+          const finished = () => {
+            this.removeEventListener("stop", finished);
+            this.removeEventListener("error", finished);
+            this.removeEventListener("pause", paused);
+            s.recording = Math.max(0, s.recording - 1);
+            interrupt(s);
+            if (!s.ownsInput) cleanup(s);
+          };
+          const paused = () => interrupt(s);
+          this.addEventListener("stop", finished);
+          this.addEventListener("error", finished);
+          this.addEventListener("pause", paused);
+        }
+        return result;
+      };
+      globalThis.MediaRecorder = VoiceRecorder;
+    }
+    Object.defineProperty(globalThis, KEY, { value: Object.freeze({
+      version: 2,
+      prepare() {
+        prepare();
+        return snapshot();
+      },
+      arm(config) {
+        if ([...sessions].some(active)) throw new Error("recordingBusy");
+        const valid = validate(config);
+        clearTimeout(expires);
+        armed = valid;
+        prepare();
+        latest = null;
+        last = { phase: "armed", duration: modulate(valid.packet, valid.profile, valid.amplitude).length / SAMPLE_RATE, elapsed: 0, detail: "" };
+        expires = setTimeout(() => {
+          if (armed) {
+            clearArm();
+            last.phase = "expired";
+          }
+        }, 12e4);
+        return snapshot();
+      },
+      disarm() {
+        clearArm();
+        sessions.forEach(interrupt);
+        if (![...sessions].some(active)) last = { ...last, phase: "idle", detail: "" };
+        return snapshot();
+      },
+      startSignal() {
+        if (!latest || latest.closed || !latest.tone) throw new Error("noMixedStream");
+        startTone(latest, "manual");
+        return snapshot();
+      },
+      status: snapshot
+    }) });
+    addEventListener("pagehide", () => {
+      clearArm();
+      sessions.forEach((s) => cleanup(s, s.ownsInput));
+    });
+  }
+})();
