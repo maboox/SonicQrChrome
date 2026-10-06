@@ -1,0 +1,11 @@
+{
+  "extensionName": {
+    "message": "SonicQR · Text in Voice"
+  },
+  "extensionDescription": {
+    "message": "Mix short text into supported voice recordings and read it from audio files or a tab. Local processing; optional encryption."
+  },
+  "actionTitle": {
+    "message": "Open SonicQR"
+  }
+}

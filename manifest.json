@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "SonicQR · متن در وویس",
-  "version": "0.2.0",
-  "description": "ترکیب پیام کوتاه با ضبط میکروفون و خواندن آن از فایل یا صدای تب؛ پردازش محلی.",
+  "name": "__MSG_extensionName__",
+  "version": "0.3.0",
+  "description": "__MSG_extensionDescription__",
   "minimum_chrome_version": "116",
   "permissions": [
     "activeTab",
@@ -21,18 +21,24 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "باز کردن SonicQR",
-    "default_icon": "assets/icon.png"
+    "default_title": "__MSG_actionTitle__",
+    "default_icon": {
+      "16": "assets/icon-16.png",
+      "32": "assets/icon-32.png",
+      "48": "assets/icon-48.png"
+    }
   },
   "icons": {
-    "16": "assets/icon.png",
-    "48": "assets/icon.png",
-    "128": "assets/icon.png"
+    "16": "assets/icon-16.png",
+    "32": "assets/icon-32.png",
+    "48": "assets/icon-48.png",
+    "128": "assets/icon-128.png"
   },
   "side_panel": {
     "default_path": "panel.html"
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'none'; base-uri 'none'"
-  }
+  },
+  "default_locale": "fa"
 }
