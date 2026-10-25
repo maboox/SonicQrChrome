@@ -7,4 +7,4 @@
 
 The screenshots show the actual panel UI with real signal creation and real WAV decoding. Chrome APIs are stubbed only to display a local demonstration target. They do not show or imply a verified WhatsApp/Bale transfer or a real signed-in messaging account. No private user messages or audio appear in these assets. The runtime does not load this folder.
 
-Recreate after UI changes: `npm run build`, install Playwright Chromium, then `npm run store:assets`. Review the images before submitting them. Choose the appropriate language in the Web Store dashboard and upload its screenshots; the promo image is language neutral apart from the product name.
+Recreate after UI changes: `npm run build`, install Playwright Chromium, then `npm run store:assets`. Review the images before submitting them. Choose the appropriate language in the Web Store dashboard and upload its screenshots. The promo tile uses the product name and English tagline. Captions surround real panel captures; target selection is a local demonstration, not a live messenger account.

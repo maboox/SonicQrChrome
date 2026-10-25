@@ -50,7 +50,9 @@ fs.mkdirSync(output, { recursive: true }); fs.mkdirSync(qa, { recursive: true })
     const icon=fs.readFileSync(path.join(root,'assets/icon.png')).toString('base64');
     await promo.setContent(`<style>body{margin:0;width:440px;height:280px;display:flex;align-items:center;justify-content:center;gap:22px;background:radial-gradient(circle at 100% 0,#9561d866,transparent 75%),#28113e;color:white;font-family:"Segoe UI",sans-serif}img{width:104px;height:104px}strong{font-size:35px;letter-spacing:-1px}p{color:#d5b7f3;font-size:13px;line-height:1.7;max-width:210px}</style><img src="data:image/png;base64,${icon}"><div><strong>SonicQR</strong><p>Let your voice carry more.<br>Text inside sound. Local by design.</p></div>`);
     await promo.screenshot({path:path.join(output,'promo-small.png')});
-    fs.copyFileSync(path.join(root,'assets/icon-128.png'),path.join(output,'icon-128.png'));
+    await promo.setViewportSize({width:128,height:128});
+    await promo.setContent(`<style>html,body{margin:0;background:transparent}img{display:block;width:96px;height:96px;margin:16px}</style><img alt="" src="data:image/png;base64,${icon}">`);
+    await promo.screenshot({path:path.join(output,'icon-128.png'),omitBackground:true});
     console.log('Created four bilingual 1280×800 screenshots, 440×280 promo and 128px store icon.');
   } finally { await browser?.close(); await new Promise(r=>server.close(r)); }
 })().catch(error=>{console.error(error);process.exitCode=1;});

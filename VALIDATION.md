@@ -10,6 +10,7 @@ Tests use synthetic text and audio. They must not be interpreted as proof of com
 | `npm run test:browser` | Installed MV3 extension in Playwright Chromium, real recording/worker round trips, CSP, manifest permissions and panel file workflows |
 | `npm run package` | Rebuild, locale/version/license/CSP/resource checks, explicit ZIP allowlist, round-trip verification of archive contents and SHA-256 |
 | Gitleaks | Tracked content and reachable Git history; exact public hook identifier false positives are documented in `.gitleaks.toml` |
+| Dependency audit | `npm audit --audit-level=high` runs in CI; the 0.4.0 dependency set returned no registered advisories in the npm bulk advisory check on 25 October 2026 |
 
 Local UI/audio tests can use an installed Chrome through `SONICQR_BROWSER_EXECUTABLE`. Branded Chrome may reject extension side-loading flags; CI uses Playwright Chromium for the installed MV3 test. The CI result for a commit is the authoritative record of checks completed for that revision.
 
