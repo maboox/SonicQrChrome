@@ -9,7 +9,7 @@ fs.mkdirSync(qa, { recursive: true });
   let context;
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'sonicqr-browser-'));
   try {
-    context = await chromium.launchPersistentContext(profile, { channel: 'chromium', headless: true, ignoreDefaultArgs: ['--disable-extensions'], viewport: { width: 1100, height: 900 }, args: [`--disable-extensions-except=${extensionRoot}`, `--load-extension=${extensionRoot}`, '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] });
+    context = await chromium.launchPersistentContext(profile, { executablePath: process.env.SONICQR_BROWSER_EXECUTABLE || undefined, channel: 'chromium', headless: true, ignoreDefaultArgs: ['--disable-extensions'], viewport: { width: 1100, height: 900 }, args: [`--disable-extensions-except=${extensionRoot}`, `--load-extension=${extensionRoot}`, '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] });
     const worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
     const id = new URL(worker.url()).host;
     const manifest = await worker.evaluate(() => chrome.runtime.getManifest());

@@ -24,7 +24,7 @@ fs.mkdirSync(qa, { recursive: true });
   try {
     await new Promise(resolve => server.listen(0,'127.0.0.1',resolve));
     const origin = `http://127.0.0.1:${server.address().port}`;
-    browser = await chromium.launch({ headless:true,args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream', '--use-file-for-fake-audio-capture='+microphoneFile] });
+    browser = await chromium.launch({ executablePath: process.env.SONICQR_BROWSER_EXECUTABLE || undefined, headless:true,args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream', '--use-file-for-fake-audio-capture='+microphoneFile] });
     const context = await browser.newContext({ permissions:['microphone'] });
     for (const route of ['custom-pcm','cached-mediarecorder','existing-mic-mediarecorder','existing-mic-web-audio','cloned-cached-recorder','delayed-web-audio','reused-microphone','cached-consumer-manual']) {
       const page = await context.newPage();

@@ -16,7 +16,7 @@ fs.mkdirSync(qa, { recursive: true });
     });
     await new Promise(resolve => server.listen(0,'127.0.0.1',resolve));
     const origin = `http://127.0.0.1:${server.address().port}`;
-    browser = await chromium.launch({ headless: true, args: ['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream'] });
+    browser = await chromium.launch({ executablePath: process.env.SONICQR_BROWSER_EXECUTABLE || undefined, headless: true, args: ['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream'] });
     const context = await browser.newContext({ viewport: { width: 1100, height: 900 }, permissions: ['microphone'] });
     const page = await context.newPage(); const errors = []; page.on('pageerror',e=>errors.push(e.message));
     await page.goto(origin+'/demo.html');
@@ -101,6 +101,51 @@ fs.mkdirSync(qa, { recursive: true });
     await panel.locator('#sendTab').click(); await panel.screenshot({path:path.join(qa,'panel-send.png'),fullPage:true});
     await panel.emulateMedia({colorScheme:'dark'}); await panel.screenshot({path:path.join(qa,'panel-dark.png'),fullPage:true});
     console.log('PASS inactive recorder passthrough, signal export, stale output reset, WebM file decode, both languages and layouts.');
+    await panel.emulateMedia({colorScheme:'light'});
+    // Privacy reset clears DOM fields and cached decoded output, without persisting drafts.
+    await panel.locator('#clearSession').click();
+    await expect(panel.locator('#message')).toHaveValue('');
+    await expect(panel.locator('#decodePassword')).toHaveValue('');
+    await expect(panel.locator('#ready')).toBeHidden();
+    await panel.locator('#receiveTab').click();
+    await expect(panel.locator('#resultCard')).toBeHidden();
+    await expect(panel.locator('#retry')).toBeHidden();
+    await panel.locator('#receiveTab').focus(); await panel.keyboard.press('Home');
+    await expect(panel.locator('#sendTab')).toBeFocused();
+    await expect(panel.locator('#sendTab')).toHaveAttribute('aria-selected','true');
+    await panel.keyboard.press('End'); await expect(panel.locator('#receiveTab')).toBeFocused();
+    // A delayed old tab lookup must not overwrite a more recent target.
+    await panel.evaluate(() => {
+      chrome.tabs.get = async id => {
+        if (id === 2) await new Promise(resolve => window.releaseOldTarget = resolve);
+        return {id,windowId:1,title:'Target '+id,url:'https://example.test/'+id+'?private=draft'};
+      };
+      chrome.storage.session.get = async () => ({'window-1':2});
+    });
+    await panel.locator('#refreshTarget').click();
+    await panel.waitForFunction(() => !!window.releaseOldTarget);
+    await panel.evaluate(() => { chrome.storage.session.get = async () => ({'window-1':3}); });
+    await panel.locator('#refreshTarget').click();
+    await expect(panel.locator('#targetName')).toHaveText('Target 3');
+    await panel.evaluate(() => window.releaseOldTarget());
+    await expect(panel.locator('#targetName')).toHaveText('Target 3');
+    await expect(panel.locator('#targetUrl')).toHaveText('https://example.test');
+    // An older polling response must not overwrite a fresh target's status.
+    await panel.evaluate(() => {
+      const original = chrome.runtime.sendMessage;
+      chrome.runtime.sendMessage = async request => {
+        if (request.type === 'STATUS' && request.tabId === 3) return new Promise(resolve => window.releaseOldStatus = () => resolve({ok:true,result:{phase:'expired'}}));
+        if (request.type === 'STATUS' && request.tabId === 4) return {ok:true,result:{phase:'armed'}};
+        return original(request);
+      };
+    });
+    await panel.waitForFunction(() => !!window.releaseOldStatus);
+    await panel.evaluate(() => { chrome.storage.session.get = async () => ({'window-1':4}); });
+    await panel.locator('#refreshTarget').click();
+    await expect(panel.locator('#targetName')).toHaveText('Target 4');
+    await panel.evaluate(() => window.releaseOldStatus());
+    await expect(panel.locator('#mergeState')).toContainText('Armed');
+    console.log('PASS keyboard tabs, session clearing, private URL minimization, stale tab lookups and polling responses.');
     expect(errors).toEqual([]);
   } finally { await browser?.close(); await new Promise(resolve=>server?server.close(resolve):resolve()); }
 })().catch(error=>{console.error(error);process.exitCode=1;});

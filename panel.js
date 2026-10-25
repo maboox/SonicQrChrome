@@ -499,6 +499,7 @@
   var SAMPLE_RATE = 48e3;
   var MAX_TEXT_BYTES = 2e3;
   var MAX_AUDIO_SECONDS = 120;
+  var MAX_SIGNAL_SECONDS = 117;
   var MAX_FILE_BYTES = 25 * 1024 * 1024;
   var PROFILES = Object.freeze({
     fast: { id: 1, symbolSeconds: 0.022, frequencies: Array.from({ length: 16 }, (_, i2) => 1e3 + i2 * 400), preamble: 7800, marker: 600, amplitude: 0.68 },
@@ -550,7 +551,13 @@
     const check = crc16(packet.subarray(0, -2));
     packet[packet.length - 2] = check >> 8;
     packet[packet.length - 1] = check & 255;
+    if (signalDuration(packet.length, profileId === 1 ? "fast" : "hidden") > MAX_SIGNAL_SECONDS) throw new CodecError("signalTooLong");
     return packet;
+  }
+  function signalDuration(packetLength, profileName = "fast") {
+    const p = PROFILES[profileName];
+    if (!p || !Number.isInteger(packetLength) || packetLength < 9 || packetLength > MAX_TEXT_BYTES + 45) throw new CodecError("invalidPacket");
+    return (Math.round(0.36 * SAMPLE_RATE) + packetLength * 2 * Math.floor(p.symbolSeconds * SAMPLE_RATE) + Math.round(0.06 * SAMPLE_RATE)) / SAMPLE_RATE;
   }
   function writeTone(out, start, count, frequency, amplitude) {
     const fade = Math.min(150, Math.floor(count / 7));
@@ -562,6 +569,8 @@
   function modulate(packet, profileName = "fast", amplitude) {
     const p = PROFILES[profileName];
     if (!p) throw new CodecError("invalidPacket");
+    if (signalDuration(packet.length, profileName) > MAX_SIGNAL_SECONDS) throw new CodecError("signalTooLong");
+    if (amplitude != null && (!Number.isFinite(amplitude) || amplitude < 0 || amplitude > 1)) throw new CodecError("invalidPacket");
     const symbolLength = Math.floor(p.symbolSeconds * SAMPLE_RATE);
     const dataStart = Math.round(0.36 * SAMPLE_RATE);
     const out = new Float32Array(dataStart + packet.length * 2 * symbolLength + Math.round(0.06 * SAMPLE_RATE));
@@ -633,24 +642,28 @@
       this.cancel();
       return new Promise((resolve, reject) => {
         this.reject = reject;
-        const worker = this.worker = new Worker("./decoder.worker.js");
-        this.timeout = setTimeout(() => {
-          this.cancel("decodeTimeout");
-        }, 45e3);
-        worker.onmessage = ({ data }) => {
-          if (data.progress != null) {
-            onProgress(data.progress);
-            return;
-          }
-          clearTimeout(this.timeout);
-          worker.terminate();
-          this.worker = null;
-          this.reject = null;
-          if (data.error) reject(Object.assign(new Error(data.error), { packet: data.packet }));
-          else resolve(data.result);
-        };
-        worker.onerror = () => this.cancel("decodeError");
-        worker.postMessage(packet ? { id: 1, packet, password } : { id: 1, ...audio, password });
+        try {
+          const worker = this.worker = new Worker("./decoder.worker.js");
+          this.timeout = setTimeout(() => {
+            this.cancel("decodeTimeout");
+          }, 45e3);
+          worker.onmessage = ({ data }) => {
+            if (data.progress != null) {
+              onProgress(data.progress);
+              return;
+            }
+            clearTimeout(this.timeout);
+            worker.terminate();
+            this.worker = null;
+            this.reject = null;
+            if (data.error) reject(Object.assign(new Error(data.error), { packet: data.packet }));
+            else resolve(data.result);
+          };
+          worker.onerror = () => this.cancel("decodeError");
+          worker.postMessage(packet ? { id: 1, packet, password } : { id: 1, ...audio, password });
+        } catch {
+          this.cancel("decodeError");
+        }
       });
     }
     cancel(code = "cancelled") {
@@ -665,10 +678,11 @@
   async function capturePCM(stream, { monitor = false, onTime = () => {
   }, onLimit = () => {
   } } = {}) {
-    const context = new AudioContext({ sampleRate: 48e3 });
+    let context;
     let source, node, frames = 0, flushResolve, stopped = false;
     const chunks = [];
     try {
+      context = new AudioContext({ sampleRate: 48e3 });
       await context.resume();
       await context.audioWorklet.addModule("./recorder.worklet.js");
       node = new AudioWorkletNode(context, "pcm-recorder");
@@ -684,27 +698,42 @@
           frames += chunk.length;
           onTime(frames / context.sampleRate);
         }
-        if (frames >= MAX_AUDIO_SECONDS * context.sampleRate) onLimit();
+        if (frames >= MAX_AUDIO_SECONDS * context.sampleRate) limit();
       };
       source.connect(node);
       node.connect(context.destination);
       if (monitor) source.connect(context.destination);
-      const timer = setTimeout(onLimit, MAX_AUDIO_SECONDS * 1e3);
+      let limited = false;
+      const limit = () => {
+        if (!limited && !stopped) {
+          limited = true;
+          onLimit();
+        }
+      };
+      const timer = setTimeout(limit, MAX_AUDIO_SECONDS * 1e3);
       return {
         async stop() {
           if (stopped) return null;
           stopped = true;
           clearTimeout(timer);
-          await new Promise((resolve) => {
-            flushResolve = resolve;
-            node.port.postMessage("stop");
-            setTimeout(resolve, 250);
-          });
-          stream.getTracks().forEach((track) => track.stop());
-          source.disconnect();
-          node.disconnect();
           const sampleRate = context.sampleRate;
-          await context.close();
+          try {
+            await new Promise((resolve) => {
+              const timeout = setTimeout(resolve, 250);
+              flushResolve = () => {
+                clearTimeout(timeout);
+                resolve();
+              };
+              node.port.postMessage("stop");
+            });
+          } finally {
+            stream.getTracks().forEach((track) => track.stop());
+            source.disconnect();
+            node.disconnect();
+            node.port.onmessage = null;
+            node.port.close();
+            await context.close();
+          }
           const samples = new Float32Array(frames);
           let offset = 0;
           for (const chunk of chunks) {
@@ -718,7 +747,7 @@
       stream.getTracks().forEach((track) => track.stop());
       source?.disconnect();
       node?.disconnect();
-      await context.close();
+      await context?.close();
       throw error;
     }
   }
@@ -733,6 +762,16 @@
   // src/i18n.mjs
   var I18N = {
     fa: {
+      heroTitle: "\u062D\u0631\u0641\u200C\u0647\u0627\u06CC\u062A \u0631\u0627 \u0628\u0627 \u0635\u062F\u0627 \u0628\u0641\u0631\u0633\u062A.",
+      heroTip: "\u06CC\u06A9 \u067E\u06CC\u0627\u0645 \u06A9\u0648\u062A\u0627\u0647 \u0628\u0633\u0627\u0632\u060C \u0628\u0627 \u0648\u0648\u06CC\u0633 \u0647\u0645\u0631\u0627\u0647\u0634 \u06A9\u0646 \u0648 \u0627\u0632 \u0635\u062F\u0627 \u062F\u0648\u0628\u0627\u0631\u0647 \u0628\u062E\u0648\u0627\u0646.",
+      localBadge: "\u067E\u0631\u062F\u0627\u0632\u0634 \u0645\u062D\u0644\u06CC \xB7 \u0646\u0633\u062E\u0647\u0654 \u0622\u0632\u0645\u0627\u06CC\u0634\u06CC",
+      composeTitle: "\u067E\u06CC\u0627\u0645\u062A \u0631\u0627 \u0622\u0645\u0627\u062F\u0647 \u06A9\u0646",
+      signalSettings: "\u0631\u0645\u0632 \u0648 \u062A\u0646\u0638\u06CC\u0645\u0627\u062A \u0633\u06CC\u06AF\u0646\u0627\u0644",
+      passwordTip: "\u0631\u0645\u0632\u060C \u0645\u062A\u0646 \u0631\u0627 \u0631\u0645\u0632\u06AF\u0630\u0627\u0631\u06CC \u0645\u06CC\u200C\u06A9\u0646\u062F. \u0622\u0646 \u0631\u0627 \u0627\u0632 \u06CC\u06A9 \u0645\u0633\u06CC\u0631 \u062C\u062F\u0627 \u0628\u0647 \u06AF\u06CC\u0631\u0646\u062F\u0647 \u0628\u062F\u0647.",
+      fileLimits: "WAV \xB7 WebM \xB7 OGG \xB7 MP3 / \u062A\u0627 \u06F2\u06F5 \u0645\u06AF\u0627\u0628\u0627\u06CC\u062A \u0648 \u06F2 \u062F\u0642\u06CC\u0642\u0647",
+      clearSession: "\u067E\u0627\u06A9 \u06A9\u0631\u062F\u0646 \u0645\u062A\u0646\u060C \u0631\u0645\u0632 \u0648 \u0646\u062A\u06CC\u062C\u0647",
+      sessionCleared: "\u0645\u062A\u0646\u060C \u0631\u0645\u0632 \u0648 \u0646\u062A\u06CC\u062C\u0647 \u0627\u0632 \u0627\u06CC\u0646 \u067E\u0646\u0644 \u067E\u0627\u06A9 \u0634\u062F\u0646\u062F.",
+      signalTooLong: "\u0635\u062F\u0627\u06CC \u0627\u06CC\u0646 \u067E\u06CC\u0627\u0645 \u0637\u0648\u0644\u0627\u0646\u06CC\u200C\u062A\u0631 \u0627\u0632 \u0638\u0631\u0641\u06CC\u062A \u0627\u0633\u062A. \u0645\u062A\u0646 \u0631\u0627 \u06A9\u0648\u062A\u0627\u0647\u200C\u062A\u0631 \u06A9\u0646 \u06CC\u0627 \u062D\u0627\u0644\u062A \u0648\u0627\u0636\u062D \u0631\u0627 \u0627\u0646\u062A\u062E\u0627\u0628 \u06A9\u0646.",
       step2: "\u06F2",
       mixPrivacy: "\u0645\u062A\u0646 \u0648 \u0635\u0648\u062A \u0645\u062D\u0644\u06CC \u067E\u0631\u062F\u0627\u0632\u0634 \u0645\u06CC\u200C\u0634\u0648\u0646\u062F\u061B \u0633\u0627\u06CC\u062A \u0628\u0647 \u0648\u0648\u06CC\u0633 \u062A\u0631\u06A9\u06CC\u0628\u06CC \u062F\u0633\u062A\u0631\u0633\u06CC \u062F\u0627\u0631\u062F. \u0628\u0631\u0627\u06CC \u0645\u062A\u0646 \u062E\u0635\u0648\u0635\u06CC \u0631\u0645\u0632 \u062A\u0639\u06CC\u06CC\u0646 \u06A9\u0646.",
       privacyLink: "\u062D\u0631\u06CC\u0645 \u062E\u0635\u0648\u0635\u06CC",
@@ -855,6 +894,16 @@
       back: "\u0628\u0631\u06AF\u0634\u062A \u0628\u0647 \u0627\u0641\u0632\u0648\u0646\u0647: \u0631\u0648\u06CC \u0622\u06CC\u06A9\u0648\u0646 SonicQR \u062F\u0631 \u062A\u0628 \u067E\u06CC\u0627\u0645\u200C\u0631\u0633\u0627\u0646 \u06A9\u0644\u06CC\u06A9 \u06A9\u0646."
     },
     en: {
+      heroTitle: "Let your voice carry more.",
+      heroTip: "Create a short message. Mix it into a voice recording. Read it back from sound.",
+      localBadge: "Processed locally \xB7 Beta",
+      composeTitle: "Prepare your message",
+      signalSettings: "Password & signal settings",
+      passwordTip: "A password encrypts the text. Share it with the recipient through a separate channel.",
+      fileLimits: "WAV \xB7 WebM \xB7 OGG \xB7 MP3 / up to 25 MB, 2 minutes",
+      clearSession: "Clear text, passwords & result",
+      sessionCleared: "Text, passwords and result cleared from this panel.",
+      signalTooLong: "This message exceeds the audio capacity. Shorten the text or choose audible mode.",
       step2: "2",
       mixPrivacy: "Text and audio are processed locally; the site receives the mixed voice. Use a password for private text.",
       privacyLink: "Privacy policy",
@@ -978,11 +1027,353 @@
     }
   };
 
+  // node_modules/lucide/dist/esm/defaultAttributes.mjs
+  var defaultAttributes = {
+    xmlns: "http://www.w3.org/2000/svg",
+    width: 24,
+    height: 24,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    "stroke-width": 2,
+    "stroke-linecap": "round",
+    "stroke-linejoin": "round"
+  };
+
+  // node_modules/lucide/dist/esm/createElement.mjs
+  var createSVGElement = ([tag, attrs, children]) => {
+    const element = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    Object.keys(attrs).forEach((name) => {
+      element.setAttribute(name, String(attrs[name]));
+    });
+    if (children?.length) {
+      children.forEach((child) => {
+        const childElement = createSVGElement(child);
+        element.appendChild(childElement);
+      });
+    }
+    return element;
+  };
+  var createElement = (iconNode, customAttrs = {}) => {
+    const tag = "svg";
+    const attrs = {
+      ...defaultAttributes,
+      ...customAttrs
+    };
+    return createSVGElement([tag, attrs, iconNode]);
+  };
+
+  // node_modules/lucide/dist/esm/shared/src/utils/mergeClasses.mjs
+  var mergeClasses = (...classes) => classes.filter((className, index, array) => {
+    return Boolean(className) && className.trim() !== "" && array.indexOf(className) === index;
+  }).join(" ").trim();
+
+  // node_modules/lucide/dist/esm/shared/src/utils/hasA11yProp.mjs
+  var hasA11yProp = (props) => {
+    for (const prop in props) {
+      if (prop.startsWith("aria-") || prop === "role" || prop === "title") {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // node_modules/lucide/dist/esm/shared/src/utils/toCamelCase.mjs
+  var toCamelCase = (string) => {
+    let out = "";
+    let upperNext = false;
+    for (const ch of string) {
+      if (ch === "-" || ch === "_" || ch <= " ") {
+        upperNext = out.length > 0;
+        continue;
+      }
+      if (out.length === 0) {
+        out += ch.toLowerCase();
+      } else {
+        out += upperNext ? ch.toUpperCase() : ch;
+      }
+      upperNext = false;
+    }
+    return out;
+  };
+
+  // node_modules/lucide/dist/esm/shared/src/utils/toPascalCase.mjs
+  var toPascalCase = (string) => {
+    const camelCase = toCamelCase(string);
+    return camelCase.charAt(0).toUpperCase() + camelCase.slice(1);
+  };
+
+  // node_modules/lucide/dist/esm/replaceElement.mjs
+  var getAttrs = (element) => Array.from(element.attributes).reduce((attrs, attr) => {
+    attrs[attr.name] = attr.value;
+    return attrs;
+  }, {});
+  var getClassNames = (attrs) => {
+    if (typeof attrs === "string") return attrs;
+    if (!attrs || !attrs.class) return "";
+    if (attrs.class && typeof attrs.class === "string") {
+      return attrs.class.split(" ");
+    }
+    if (attrs.class && Array.isArray(attrs.class)) {
+      return attrs.class;
+    }
+    return "";
+  };
+  var replaceElement = (element, { nameAttr, icons, attrs }) => {
+    const iconName = element.getAttribute(nameAttr);
+    if (iconName == null) return;
+    const ComponentName = toPascalCase(iconName);
+    const iconNode = icons[ComponentName];
+    if (!iconNode) {
+      return console.warn(
+        `${element.outerHTML} icon name was not found in the provided icons object.`
+      );
+    }
+    const elementAttrs = getAttrs(element);
+    const ariaProps = hasA11yProp(elementAttrs) ? {} : { "aria-hidden": "true" };
+    const iconAttrs = {
+      ...defaultAttributes,
+      "data-lucide": iconName,
+      ...ariaProps,
+      ...attrs,
+      ...elementAttrs
+    };
+    const elementClassNames = getClassNames(elementAttrs);
+    const className = getClassNames(attrs);
+    const classNames = mergeClasses(
+      "lucide",
+      `lucide-${iconName}`,
+      ...elementClassNames,
+      ...className
+    );
+    if (classNames) {
+      Object.assign(iconAttrs, {
+        class: classNames
+      });
+    }
+    const svgElement = createElement(iconNode, iconAttrs);
+    return element.parentNode?.replaceChild(svgElement, element);
+  };
+
+  // node_modules/lucide/dist/esm/icons/audio-lines.mjs
+  var AudioLines = [
+    ["path", { d: "M2 10v3" }],
+    ["path", { d: "M6 6v11" }],
+    ["path", { d: "M10 3v18" }],
+    ["path", { d: "M14 8v7" }],
+    ["path", { d: "M18 5v13" }],
+    ["path", { d: "M22 10v3" }]
+  ];
+
+  // node_modules/lucide/dist/esm/icons/circle-question-mark.mjs
+  var CircleQuestionMark = [
+    ["circle", { cx: "12", cy: "12", r: "10" }],
+    ["path", { d: "M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" }],
+    ["path", { d: "M12 17h.01" }]
+  ];
+
+  // node_modules/lucide/dist/esm/icons/copy.mjs
+  var Copy = [
+    ["rect", { width: "14", height: "14", x: "8", y: "8", rx: "2", ry: "2" }],
+    ["path", { d: "M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" }]
+  ];
+
+  // node_modules/lucide/dist/esm/icons/download.mjs
+  var Download = [
+    ["path", { d: "M12 15V3" }],
+    ["path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" }],
+    ["path", { d: "m7 10 5 5 5-5" }]
+  ];
+
+  // node_modules/lucide/dist/esm/icons/eraser.mjs
+  var Eraser = [
+    [
+      "path",
+      {
+        d: "M21 21H8a2 2 0 0 1-1.42-.587l-3.994-3.999a2 2 0 0 1 0-2.828l10-10a2 2 0 0 1 2.829 0l5.999 6a2 2 0 0 1 0 2.828L12.834 21"
+      }
+    ],
+    ["path", { d: "m5.082 11.09 8.828 8.828" }]
+  ];
+
+  // node_modules/lucide/dist/esm/icons/file-headphone.mjs
+  var FileHeadphone = [
+    [
+      "path",
+      {
+        d: "M4 6.835V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.706.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2h-.343"
+      }
+    ],
+    ["path", { d: "M14 2v5a1 1 0 0 0 1 1h5" }],
+    [
+      "path",
+      { d: "M2 19a2 2 0 0 1 4 0v1a2 2 0 0 1-4 0v-4a6 6 0 0 1 12 0v4a2 2 0 0 1-4 0v-1a2 2 0 0 1 4 0" }
+    ]
+  ];
+
+  // node_modules/lucide/dist/esm/icons/flask-conical.mjs
+  var FlaskConical = [
+    [
+      "path",
+      {
+        d: "M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2"
+      }
+    ],
+    ["path", { d: "M6.453 15h11.094" }],
+    ["path", { d: "M8.5 2h7" }]
+  ];
+
+  // node_modules/lucide/dist/esm/icons/globe.mjs
+  var Globe = [
+    ["circle", { cx: "12", cy: "12", r: "10" }],
+    ["path", { d: "M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" }],
+    ["path", { d: "M2 12h20" }]
+  ];
+
+  // node_modules/lucide/dist/esm/icons/lock-keyhole.mjs
+  var LockKeyhole = [
+    ["circle", { cx: "12", cy: "16", r: "1" }],
+    ["rect", { x: "3", y: "10", width: "18", height: "12", rx: "2" }],
+    ["path", { d: "M7 10V7a5 5 0 0 1 10 0v3" }]
+  ];
+
+  // node_modules/lucide/dist/esm/icons/radio.mjs
+  var Radio = [
+    ["path", { d: "M16.247 7.761a6 6 0 0 1 0 8.478" }],
+    ["path", { d: "M19.075 4.933a10 10 0 0 1 0 14.134" }],
+    ["path", { d: "M4.925 19.067a10 10 0 0 1 0-14.134" }],
+    ["path", { d: "M7.753 16.239a6 6 0 0 1 0-8.478" }],
+    ["circle", { cx: "12", cy: "12", r: "2" }]
+  ];
+
+  // node_modules/lucide/dist/esm/icons/refresh-cw.mjs
+  var RefreshCw = [
+    ["path", { d: "M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" }],
+    ["path", { d: "M21 3v5h-5" }],
+    ["path", { d: "M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" }],
+    ["path", { d: "M8 16H3v5" }]
+  ];
+
+  // node_modules/lucide/dist/esm/icons/scan-line.mjs
+  var ScanLine = [
+    ["path", { d: "M3 7V5a2 2 0 0 1 2-2h2" }],
+    ["path", { d: "M17 3h2a2 2 0 0 1 2 2v2" }],
+    ["path", { d: "M21 17v2a2 2 0 0 1-2 2h-2" }],
+    ["path", { d: "M7 21H5a2 2 0 0 1-2-2v-2" }],
+    ["path", { d: "M7 12h10" }]
+  ];
+
+  // node_modules/lucide/dist/esm/icons/send.mjs
+  var Send = [
+    [
+      "path",
+      {
+        d: "M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"
+      }
+    ],
+    ["path", { d: "m21.854 2.147-10.94 10.939" }]
+  ];
+
+  // node_modules/lucide/dist/esm/icons/settings-2.mjs
+  var Settings2 = [
+    ["path", { d: "M14 17H5" }],
+    ["path", { d: "M19 7h-9" }],
+    ["circle", { cx: "17", cy: "17", r: "3" }],
+    ["circle", { cx: "7", cy: "7", r: "3" }]
+  ];
+
+  // node_modules/lucide/dist/esm/icons/shield-check.mjs
+  var ShieldCheck = [
+    [
+      "path",
+      {
+        d: "M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"
+      }
+    ],
+    ["path", { d: "m9 12 2 2 4-4" }]
+  ];
+
+  // node_modules/lucide/dist/esm/icons/wand-sparkles.mjs
+  var WandSparkles = [
+    [
+      "path",
+      {
+        d: "m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"
+      }
+    ],
+    ["path", { d: "m14 7 3 3" }],
+    ["path", { d: "M5 6v4" }],
+    ["path", { d: "M19 14v4" }],
+    ["path", { d: "M10 2v2" }],
+    ["path", { d: "M7 8H3" }],
+    ["path", { d: "M21 16h-4" }],
+    ["path", { d: "M11 3H9" }]
+  ];
+
+  // node_modules/lucide/dist/esm/icons/x.mjs
+  var X = [
+    ["path", { d: "M18 6 6 18" }],
+    ["path", { d: "m6 6 12 12" }]
+  ];
+
+  // node_modules/lucide/dist/esm/lucide.mjs
+  var createIcons = ({
+    icons = {},
+    nameAttr = "data-lucide",
+    attrs = {},
+    root = document,
+    inTemplates
+  } = {}) => {
+    if (!Object.values(icons).length) {
+      throw new Error(
+        "Please provide an icons object.\nIf you want to use all the icons you can import it like:\n `import { createIcons, icons } from 'lucide';\nlucide.createIcons({icons});`"
+      );
+    }
+    if (typeof root === "undefined") {
+      throw new Error("`createIcons()` only works in a browser environment.");
+    }
+    const elementsToReplace = Array.from(root.querySelectorAll(`[${nameAttr}]`));
+    elementsToReplace.forEach((element) => replaceElement(element, { nameAttr, icons, attrs }));
+    if (inTemplates) {
+      const templates = Array.from(root.querySelectorAll("template"));
+      templates.forEach(
+        (template) => createIcons({
+          icons,
+          nameAttr,
+          attrs,
+          root: template.content,
+          inTemplates
+        })
+      );
+    }
+    if (nameAttr === "data-lucide") {
+      const deprecatedElements = root.querySelectorAll("[icon-name]");
+      if (deprecatedElements.length > 0) {
+        console.warn(
+          "[Lucide] Some icons were found with the now deprecated icon-name attribute. These will still be replaced for backwards compatibility, but will no longer be supported in v1.0 and you should switch to data-lucide"
+        );
+        Array.from(deprecatedElements).forEach(
+          (element) => replaceElement(element, { nameAttr: "icon-name", icons, attrs })
+        );
+      }
+    }
+  };
+
+  // src/icons.mjs
+  function renderIcons() {
+    createIcons({ icons: { AudioLines, Send, ScanLine, ShieldCheck, RefreshCw, FileAudio: FileHeadphone, FlaskConical, Download, Copy, Settings2, Globe, CircleHelp: CircleQuestionMark, LockKeyhole, X, Eraser, Radio, WandSparkles }, attrs: { "aria-hidden": "true", "focusable": "false", "stroke-width": 1.8 } });
+  }
+
   // src/panel.mjs
   var $ = (id) => document.getElementById(id);
   var decoder = new Decoder();
   var state = { lang: "fa", tab: "send", target: null, signal: null, phase: "idle", busy: false, capture: null, starting: false, audio: null, packet: null, result: null, poll: false, error: "", notice: "", revision: 0, active: false, status: {} };
   var previewUrl = null;
+  var targetRevision = 0;
+  var statusRevision = 0;
+  var pendingTarget = null;
+  var disposed = false;
+  renderIcons();
   var tr = (key) => I18N[state.lang][key] || I18N[state.lang].unexpected;
   var number = (x2) => new Intl.NumberFormat(state.lang === "fa" ? "fa-IR" : "en", { maximumFractionDigits: 1 }).format(x2);
   function supportedTarget() {
@@ -1000,8 +1391,14 @@
   function render() {
     document.documentElement.lang = state.lang;
     document.documentElement.dir = state.lang === "fa" ? "rtl" : "ltr";
+    document.body.dataset.mode = state.tab;
+    document.body.dataset.ready = String(!!state.signal);
     document.querySelectorAll("[data-i18n]").forEach((el) => el.textContent = tr(el.dataset.i18n));
-    $("language").textContent = state.lang === "fa" ? "EN" : "\u0641\u0627\u0631\u0633\u06CC";
+    $("languageLabel").textContent = state.lang === "fa" ? "EN" : "\u0641\u0627\u0631\u0633\u06CC";
+    document.querySelectorAll("[data-i18n-title]").forEach((el) => {
+      el.title = tr(el.dataset.i18nTitle);
+      el.setAttribute("aria-label", el.title);
+    });
     $("message").placeholder = state.lang === "fa" ? "\u067E\u06CC\u0627\u0645\u062A \u0631\u0627 \u0628\u0646\u0648\u06CC\u0633\u2026" : "Write your message\u2026";
     $("password").placeholder = state.lang === "fa" ? "\u0627\u062E\u062A\u06CC\u0627\u0631\u06CC" : "Optional";
     $("sendPanel").hidden = state.tab !== "send";
@@ -1009,14 +1406,15 @@
     for (const tab of ["send", "receive"]) {
       $(tab + "Tab").classList.toggle("selected", state.tab === tab);
       $(tab + "Tab").setAttribute("aria-selected", String(state.tab === tab));
+      $(tab + "Tab").tabIndex = state.tab === tab ? 0 : -1;
       $(tab + "Tab").disabled = state.busy || state.starting || !!state.capture;
     }
     const length = Array.from($("message").value).length;
     $("count").textContent = `${number(length)} / ${number(500)}`;
     $("count").style.color = length > 500 ? "var(--red)" : "";
     $("profileHint").textContent = tr($("profile").value === "hidden" ? "hiddenHint" : "fastHint");
-    $("build").disabled = !length || length > 500 || state.busy || state.active || state.starting || !!state.capture;
-    $("build").textContent = tr(state.busy && state.tab === "send" ? "building" : "build");
+    $("build").disabled = !$("message").value.trim() || length > 500 || state.busy || state.active || state.starting || !!state.capture;
+    $("buildLabel").textContent = tr(state.busy && state.tab === "send" ? "building" : "build");
     for (const id of ["message", "password", "profile", "strength"]) $(id).disabled = state.busy || state.active || state.starting || !!state.capture;
     $("ready").hidden = !state.signal;
     $("arm").disabled = !state.signal || !supportedTarget() || state.busy || state.active || state.phase === "armed" || !!state.capture || state.starting;
@@ -1033,7 +1431,9 @@
     $("holdTip").textContent = state.signal ? tr("hold").replace("{n}", number(state.signal.duration + 1)) : "";
     $("duration").textContent = state.signal ? `${number(state.signal.duration)} ${tr("seconds")}` : "";
     $("captureTab").disabled = !supportedTarget() || state.busy || state.starting || !!state.capture || state.active || state.phase === "armed";
-    for (const id of ["enableSite", "disableSite"]) $(id).disabled = !supportedTarget() || state.busy || state.active;
+    for (const id of ["enableSite", "disableSite"]) $(id).disabled = !supportedTarget() || state.busy || state.active || state.starting || !!state.capture;
+    $("refreshTarget").disabled = state.busy || state.active || state.starting || !!state.capture;
+    $("clearSession").disabled = state.busy || state.active || state.starting || !!state.capture;
     $("audioFile").disabled = state.busy || state.starting || !!state.capture;
     $("decodePassword").disabled = state.busy || state.starting || !!state.capture;
     $("stopCapture").hidden = !state.capture;
@@ -1048,9 +1448,14 @@
     $("notice").hidden = !state.notice;
     $("notice").textContent = state.notice ? tr(state.notice) : "";
     $("targetName").textContent = state.target?.title || tr("noTarget");
-    $("targetUrl").textContent = state.target?.url || "";
+    try {
+      $("targetUrl").textContent = new URL(state.target.url).origin;
+    } catch {
+      $("targetUrl").textContent = "";
+    }
   }
   async function message(type, extra = {}, tabId = state.target?.id) {
+    if (["ARM", "DISARM", "START_SIGNAL", "ENABLE_SITE", "DISABLE_SITE"].includes(type)) statusRevision++;
     const response = await chrome.runtime.sendMessage({ type, tabId, ...extra });
     if (!response?.ok) throw new Error(response?.error || "unexpected");
     return response.result;
@@ -1064,39 +1469,63 @@
     render();
   }
   async function refreshTarget(preferred) {
-    if (state.capture || state.starting || state.busy) return;
+    if (state.capture || state.starting || state.busy || state.active) {
+      if (preferred != null) pendingTarget = preferred;
+      return;
+    }
+    const revision = ++targetRevision;
     try {
       const win = await chrome.windows.getCurrent();
       const remembered = await chrome.storage.session.get(`window-${win.id}`);
       const id = preferred ?? remembered[`window-${win.id}`];
-      const target = id != null ? await chrome.tabs.get(id) : (await chrome.tabs.query({ active: true, windowId: win.id }))[0];
+      let target = id != null ? await chrome.tabs.get(id).catch(() => null) : null;
+      if (!target || target.windowId != null && target.windowId !== win.id) target = (await chrome.tabs.query({ active: true, windowId: win.id }))[0];
+      if (revision !== targetRevision || disposed) return;
       if (state.target && state.target.id !== target?.id && state.phase === "armed") await message("DISARM").catch(() => {
       });
+      if (revision !== targetRevision || disposed) return;
       state.target = target;
       state.phase = "idle";
       state.active = false;
       state.status = {};
       if (target) {
-        setStatus(await message("STATUS"));
-        const site = await message("SITE_STATE");
+        const status = await message("STATUS", {}, target.id);
+        if (revision !== targetRevision || disposed) return;
+        setStatus(status);
+        const site = await message("SITE_STATE", {}, target.id);
+        if (revision !== targetRevision || disposed) return;
         $("disableSite").hidden = !site.enabled;
         $("enableSite").hidden = site.enabled;
       }
     } catch {
+      if (revision !== targetRevision || disposed) return;
       state.target = null;
       state.phase = "idle";
+      state.active = false;
+      state.status = {};
     }
     render();
   }
   async function poll() {
-    if (state.poll || !state.target) return;
+    if (disposed || state.poll || state.busy || state.starting || state.capture) return;
+    if (pendingTarget != null && !state.active) {
+      const id = pendingTarget;
+      pendingTarget = null;
+      await refreshTarget(id);
+      return;
+    }
+    if (!state.target) return;
+    const revision = targetRevision, operation = statusRevision, tabId = state.target.id;
     state.poll = true;
     try {
-      setStatus(await message("STATUS"));
+      const status = await message("STATUS", {}, tabId);
+      if (revision === targetRevision && operation === statusRevision && !disposed) setStatus(status);
     } catch {
-      state.phase = "idle";
-      state.active = false;
-      state.status = {};
+      if (revision === targetRevision && operation === statusRevision) {
+        state.phase = "idle";
+        state.active = false;
+        state.status = {};
+      }
     } finally {
       state.poll = false;
       render();
@@ -1195,11 +1624,31 @@
     void chrome.storage.local.set({ lang: state.lang });
     render();
   };
-  for (const tab of ["send", "receive"]) $(tab + "Tab").onclick = () => {
-    state.tab = tab;
-    state.error = "";
-    state.notice = "";
-    render();
+  for (const tab of ["send", "receive"]) {
+    $(tab + "Tab").onclick = () => {
+      state.tab = tab;
+      state.error = "";
+      state.notice = "";
+      render();
+    };
+    $(tab + "Tab").onkeydown = (event) => {
+      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+      const next = event.key === "Home" ? "send" : event.key === "End" ? "receive" : state.tab === "send" ? "receive" : "send";
+      if ($(next + "Tab").disabled) return;
+      event.preventDefault();
+      $(next + "Tab").click();
+      $(next + "Tab").focus();
+    };
+  }
+  $("clearSession").onclick = async () => {
+    await invalidate();
+    for (const id of ["message", "password", "decodePassword", "audioFile"]) $(id).value = "";
+    state.audio = null;
+    state.packet = null;
+    state.result = null;
+    $("resultText").textContent = "";
+    $("filename").textContent = "";
+    feedback("sessionCleared", true);
   };
   $("refreshTarget").onclick = () => void refreshTarget();
   $("demo").onclick = () => chrome.tabs.create({ url: chrome.runtime.getURL("demo.html") });
@@ -1298,9 +1747,19 @@
     try {
       const id = await chrome.tabCapture.getMediaStreamId({ targetTabId: state.target.id });
       const stream = await navigator.mediaDevices.getUserMedia({ audio: { mandatory: { chromeMediaSource: "tab", chromeMediaSourceId: id } }, video: false });
+      if (disposed) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
       state.capture = await capturePCM(stream, { monitor: true, onTime: (elapsed) => {
         $("captureClock").textContent = `${Math.floor(elapsed / 60)}:${String(Math.floor(elapsed % 60)).padStart(2, "0")}`;
       }, onLimit: () => void finishCapture() });
+      if (disposed) {
+        await state.capture.stop();
+        state.capture = null;
+        return;
+      }
+      $("captureClock").textContent = "0:00";
       stream.getTracks().forEach((track) => track.addEventListener("ended", () => void finishCapture(), { once: true }));
     } catch {
       feedback("captureError");
@@ -1331,10 +1790,47 @@
   render();
   var pollTimer = setInterval(() => void poll(), 600);
   addEventListener("pagehide", () => {
+    disposed = true;
+    targetRevision++;
     clearInterval(pollTimer);
     decoder.cancel();
     void state.capture?.stop();
-    if (state.phase === "armed") void message("DISARM").catch(() => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    if (["armed", "waiting", "blocked"].includes(state.phase)) void message("DISARM").catch(() => {
     });
   });
 })();
+/*! Bundled license information:
+
+lucide/dist/esm/defaultAttributes.mjs:
+lucide/dist/esm/createElement.mjs:
+lucide/dist/esm/shared/src/utils/mergeClasses.mjs:
+lucide/dist/esm/shared/src/utils/hasA11yProp.mjs:
+lucide/dist/esm/shared/src/utils/toCamelCase.mjs:
+lucide/dist/esm/shared/src/utils/toPascalCase.mjs:
+lucide/dist/esm/replaceElement.mjs:
+lucide/dist/esm/icons/audio-lines.mjs:
+lucide/dist/esm/icons/circle-question-mark.mjs:
+lucide/dist/esm/icons/copy.mjs:
+lucide/dist/esm/icons/download.mjs:
+lucide/dist/esm/icons/eraser.mjs:
+lucide/dist/esm/icons/file-headphone.mjs:
+lucide/dist/esm/icons/flask-conical.mjs:
+lucide/dist/esm/icons/globe.mjs:
+lucide/dist/esm/icons/lock-keyhole.mjs:
+lucide/dist/esm/icons/radio.mjs:
+lucide/dist/esm/icons/refresh-cw.mjs:
+lucide/dist/esm/icons/scan-line.mjs:
+lucide/dist/esm/icons/send.mjs:
+lucide/dist/esm/icons/settings-2.mjs:
+lucide/dist/esm/icons/shield-check.mjs:
+lucide/dist/esm/icons/wand-sparkles.mjs:
+lucide/dist/esm/icons/x.mjs:
+lucide/dist/esm/lucide.mjs:
+  (**
+   * @license lucide v1.61.0 - ISC
+   *
+   * This source code is licensed under the ISC license.
+   * See the LICENSE file in the root directory of this source tree.
+   *)
+*/

@@ -419,12 +419,15 @@
     }
     if (data.length > MAX_TEXT_BYTES) throw new CodecError("messageTooLong");
     try {
-      return { text: new TextDecoder("utf-8", { fatal: true }).decode(data), profile: packet[3] === 1 ? "fast" : "hidden" };
+      const text = new TextDecoder("utf-8", { fatal: true }).decode(data);
+      if (!text.trim() || Array.from(text).length > 500) throw new Error();
+      return { text, profile: packet[3] === 1 ? "fast" : "hidden" };
     } catch {
       throw new CodecError("invalidPacket");
     }
   }
   function resample(samples, sourceRate, targetRate = SAMPLE_RATE) {
+    if (![sourceRate, targetRate].every((rate) => Number.isFinite(rate) && rate >= 8e3 && rate <= 192e3)) throw new CodecError("sampleRateLow");
     if (sourceRate === targetRate) return samples;
     const result = new Float32Array(Math.round(samples.length * targetRate / sourceRate));
     for (let i2 = 0; i2 < result.length; i2++) {
@@ -499,6 +502,7 @@
   }
   async function decodeSamples(input, sampleRate, password = "", onProgress = () => {
   }) {
+    if (!Number.isFinite(sampleRate) || sampleRate > 192e3 || sampleRate < 16e3) throw new CodecError("sampleRateLow");
     if (!input.length || input.length / sampleRate > MAX_AUDIO_SECONDS + 0.1) throw new CodecError("audioTooLong");
     if (sampleRate < 16e3) throw new CodecError("sampleRateLow");
     let foundPacket = null;

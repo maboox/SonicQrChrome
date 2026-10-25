@@ -1,56 +1,23 @@
-# بررسی SonicQR Chrome 0.3.0 — ۶ اکتبر ۲۰۲۶
+# Validation scope — 0.4.0
 
-## آماده‌سازی انتشار ۰٫۳٫۰
+Tests use synthetic text and audio. They must not be interpreted as proof of compatibility with every messenger or real microphone.
 
-- ساخت و اعتبارسنجی ۲۳ فایل اجرای مجاز موفق است. `manifest.json` مستقیم در ریشهٔ ZIP است؛ هیچ سورس، تست، وابستگی توسعه، صوت آزمایشی یا فایل خصوصی وارد ZIP نمی‌شود.
-- شمارهٔ نسخهٔ manifest/package/lock، اندازهٔ آیکون‌های PNG، ترجمه‌های manifest، ارجاع فایل‌ها، نبود کد inline، CSP محدود، مجوزهای دقیق و سینتکس bundleها بررسی می‌شوند.
-- همهٔ فایل‌های بستهٔ فشرده با بایت‌های staging مقایسه می‌شوند و SHA-256 و گزارش ساخت صادر می‌شود. ZIP از زمان ثابت برای تکرارپذیری استفاده می‌کند.
-- bundleها خوانا هستند؛ fflate محلی و متن مجوز MIT آن همراه بسته است. کد remote/eval/new Function یا درخواست شبکهٔ افزونه در منابع اجرای بسته دیده نشد.
-- YAML workflow و SHAهای کامل اکشن‌های رسمی و قالب آپلود مستقیم فایل بررسی شدند. workflow روی Node 24 و Ubuntu 24.04، تست نصب را روی `dist/extension` اجرا می‌کند و تنها پس از موفقیت همهٔ مراحل artifact می‌دهد.
-- راهنما، توضیحات فروشگاه، توجیه دسترسی‌ها و دستورهای reviewer آماده‌اند. صفحهٔ حریم خصوصی داخل افزونه موجود است؛ URL عمومی آن باید توسط ناشر ایجاد و در فروشگاه ثبت شود.
-- چهار تصویر UI با اندازهٔ ۱۲۸۰×۸۰۰، promo با اندازهٔ ۴۴۰×۲۸۰ و آیکون ۱۲۸ پیکسل ساخته و بصری بررسی شده‌اند. ساخت سیگنال و خواندن WAV واقعی هستند؛ APIهای Chrome فقط برای نمایش مقصد محلی در تصاویر شبیه‌سازی شده‌اند. تصاویر ادعای انتقال واقعی از پیام‌رسان ندارند.
-- ۱۹ تست کد، تست‌های صوتی/رابط و هشت مسیر ضبط نسخهٔ جدید موفق شدند. تست‌ها از میکروفون/فایل مصنوعی استفاده می‌کنند؛ گفتار واقعی یا ارسال از سایت مشخصی در این محیط آزمایش نشده است.
+| Check | Coverage |
+|---|---|
+| `npm test` | 25 tests: UTF-8, v3 packets, AES-GCM/password retries, damaged packets, bounded decompression, acoustic round trips, sample-rate guards, sender/tab validation, compatibility state, capture failure cleanup and worker creation/post failures |
+| `npm run test:ui` | Actual WebM/Opus microphone mixing and decoding; incomplete recording; encryption; file import/export; session reset; keyboard tabs; stale target/status responses; both languages, narrow layouts and dark theme |
+| `npm run test:recording` | Eight microphone/consumer routes, cloned tracks, cached constructors, delayed starts, reused microphone, manual start, preserved normal microphone audio and suspended-context fallback |
+| `npm run test:browser` | Installed MV3 extension in Playwright Chromium, real recording/worker round trips, CSP, manifest permissions and panel file workflows |
+| `npm run package` | Rebuild, locale/version/license/CSP/resource checks, explicit ZIP allowlist, round-trip verification of archive contents and SHA-256 |
+| Gitleaks | Tracked content and reachable Git history; exact public hook identifier false positives are documented in `.gitleaks.toml` |
 
-## مشکل بازتولیدشده و اصلاح
+Local UI/audio tests can use an installed Chrome through `SONICQR_BROWSER_EXECUTABLE`. Branded Chrome may reject extension side-loading flags; CI uses Playwright Chromium for the installed MV3 test. The CI result for a commit is the authoritative record of checks completed for that revision.
 
-در نسخهٔ ۰٫۱٫۰، ضبط PCM با AudioWorklet از ورودی میکروفون، بدون ساختن MediaRecorder، **هیچ سیگنالی در فایل ضبط‌شده نداشت** و decoder خطای `noMessage` داد. این محدودیت از کد و تست بازتولید شد؛ چون نام سایت و فایل ضبط کاربر در دسترس نبود، علت دقیق شکست روی دستگاه او تأیید نشده است.
+## Manual checks still required before a store submission
 
-نسخهٔ ۰٫۲٫۰ علاوه بر سازندهٔ MediaRecorder، ورودی `getUserMedia` و اتصال مصرف‌کنندهٔ `Web Audio` را آماده می‌کند. `MediaRecorder.prototype.start` هم پوشش داده شده تا سازندهٔ ذخیره‌شدهٔ سایت، در صورت دریافت ورودی ترکیبی، سیگنال را از دست ندهد. سیگنال پیش از شروع ضبط/اتصال مصرف‌کننده پخش نمی‌شود. جریان ورودی کپی‌شده، توقف آخرین کپی، استفادهٔ دوباره از میکروفون و بسته‌شدن منابع در کد لحاظ شده‌اند.
+- Record speech with a real microphone and replay the received voice from each supported messenger.
+- Verify permission prompts and tab-audio capture with an actual clicked extension action.
+- Check that a user can revoke compatibility access and reload the site without losing a draft.
+- Test store ZIP installation and publish the real privacy-policy URL.
 
-وضعیت افزونه اکنون مسیر، حالت AudioContext و بیشینهٔ خروجی را نشان می‌دهد. «کامل شد» تنها پایان سیگنال در خروجی محلی است. تأیید واقعی انتقال نیازمند استخراج متن از فایل ضبط‌شده یا دریافت‌شده است. برای شروع ضبطی که شناسایی نمی‌شود اما ورودی ترکیبی دارد، دکمهٔ شروع دستی اضافه شده است. گزارش عیب‌یابی فاقد متن، رمز، بسته و نمونه‌های صوت است.
-
-## نتیجهٔ اجراشده
-
-- بیلد چهار bundle آفلاین و فایل AudioWorklet موفق است؛ ZIP دارای فایل‌های آمادهٔ Load unpacked است.
-- **۱۹ تست خودکار کد موفق‌اند:** ۱۵ تست کدک صوتی و رمزگذاری، و ۴ تست مرز پیام‌ها، دامنه‌های مجاز و دسترسی سایت در background با API شبیه‌سازی‌شده.
-- تست صوتی در **Chromium 141** با میکروفون مصنوعی موفق است: ورودی میکروفون → کد واقعی ترکیب → MediaRecorder واقعی → فایل WebM/Opus واقعی → decoder واقعی در Worker → متن فارسی اصلی.
-- **هشت مسیر صوتی در `tests/recording-paths.cjs` موفق‌اند:** AudioWorklet/PCM سفارشی، سازندهٔ ذخیره‌شدهٔ MediaRecorder، میکروفون ازقبل‌گرفته‌شده با MediaRecorder و Web Audio، کپی stream با سازندهٔ ذخیره‌شده، تأخیر در اتصال Web Audio، ضبط دوباره با همان میکروفون و شروع دستی برای مصرف‌کنندهٔ ذخیره‌شده. در همهٔ آن‌ها متن فارسی از صوت واقعی ضبط‌شده بازیابی شد و ورودی میکروفون مصنوعی ۴۴۰ هرتز نیز در انتهای فایل باقی ماند.
-- معلق‌بودن مسیر ترکیب، ورودی اصلی میکروفون را حفظ می‌کند و خطای روشن دارد. ضبط‌کنندهٔ ذخیره‌شده با ورودی خامِ قبلی، به‌جای موفقیت جعلی، وضعیت «مسیر پیدا نشده» و راهنمای بارگذاری مجدد می‌دهد.
-- ضبط رمزدار AES-GCM در WebM/Opus، رمز اشتباه و بازیابی با اصلاح رمز موفق‌اند.
-- توقف زودهنگام نتیجهٔ صحیح جعلی تولید نمی‌کند؛ پاک‌سازی نشست ترکیب و امکان ضبط بعدی بررسی شده‌اند.
-- بستهٔ خراب رد می‌شود؛ ضبط ویدیو دست‌نخورده می‌ماند؛ هر فعال‌سازی فقط یک ضبط را ترکیب می‌کند؛ لغو ترکیب و پاک‌سازی بررسی شده‌اند.
-- MediaRecorder در حالت غیرفعال دقیقاً همان stream ورودی سایت را می‌گیرد و میکروفونی توسط افزونه باز نمی‌شود.
-- در تست رابط، ساخت و دانلود WAV، باطل‌شدن خروجی پس از ویرایش، استخراج از WebM، فارسی/انگلیسی در عرض‌های ۳۲۰، ۳۶۰ و ۴۲۰ پیکسل و حالت تیره موفق‌اند. تصاویر رابط بصری بررسی شدند.
-- بررسی manifest و مسیر فایل‌ها موفق است؛ دسترسی خودکار عمومی به سایت‌ها، history، tabs، debugger یا webRequest درخواست نشده‌اند. دسترسی HTTPS/localhost به‌صورت اختیاری برای همان سایت درخواست می‌شود.
-- فایل کدک و قالب SonicQR v3 از نسخهٔ ۱٫۱٫۱ برنامهٔ اصلی بدون تغییر استفاده شده‌اند.
-
-## مرزهای بررسی
-
-**نصب کامل Manifest V3 در مرورگر این محیط تأیید نشده است.** اجرای Chromium کامل با پروفایل افزونه به خطای محیط `socket() failed: Operation not permitted` در ProcessSingleton برخورد کرد. تست‌های صوتی و رابط با Chromium Headless Shell روی localhost انجام شده‌اند. در تست رابط پنل، APIهای chrome شبیه‌سازی شده‌اند؛ در تست‌های صوتی AudioContext، MediaRecorder، WebM/Opus و Worker واقعی‌اند.
-
-به همین علت، پنل بومی Chrome، اعطای activeTab از کلیک روی آیکون، درخواست واقعی مجوز سایت، ثبت document_start و دریافت واقعی صدای تب باید روی کروم کاربر تأیید شوند. تست نصبِ قابل اجرا در محیط معمول در `tests/browser.cjs` قرار دارد؛ تست localhost در `tests/ui.cjs` و تست background در `tests/background.test.mjs` است. مسیرهای جدید ضبط در `tests/recording-paths.cjs` بررسی شده‌اند.
-
-ورودی میکروفون آزمایش‌شده مصنوعی است. گفتار واقعی، نویز محیط، دستگاه واقعی و انتقال از پیام‌رسان به گیرنده در این محیط آزمایش نشده‌اند. **واتساپ، بله یا سایت دیگری نتیجهٔ تأییدشدهٔ انتقال ندارند.** نام‌بردن از آن‌ها در راهنما مثال مسیر آزمایش است، نه اعلام پشتیبانی تضمین‌شده.
-
-فرکانس‌بالا پس از فشرده‌سازی وویس آسیب‌پذیر است. حالت واضح برای شروع مناسب‌تر است اما حفظ سیگنال بعد از فشرده‌سازی مجدد باید جدا بررسی شود. بعضی ضبط‌های سفارشیِ Web Audio بررسی شده‌اند؛ این نتیجه به معنای پوشش تمام ضبط‌های سفارشی نیست. مصرف‌کننده‌های ذخیره‌شده با ورودی خامِ قبلی، فریم‌های دیگر، WebRTC و برنامه‌های مستقل موبایل/ویندوز پشتیبانی عمومی ندارند.
-
-## آزمایش پیشنهادی کاربر
-
-1. فایل‌ها را جایگزین و افزونه را Reload کن؛ تب سایت و آزمایش داخلی را هم بارگذاری مجدد کن. بالای پنل باید Beta 0.2.0 دیده شود. سپس Load unpacked را در صورت نیاز انجام بده و صفحهٔ «آزمایش داخلی» را باز کن. یک متن کوتاه بدون رمز، در حالت واضح با قدرت متعادل ضبط کن و نتیجه را ببین.
-2. آزمایش را با رمز و با گفتار واقعی تکرار کن؛ فایل ترکیبی را دانلود و در بخش دریافت افزونه بخوان.
-3. در پیام‌رسان وب متن کوتاه بساز، ترکیب را فعال کن، بعد دکمهٔ ضبط سایت را بزن و تا پایان زمان سیگنال صحبت کن.
-4. اگر ورودی ترکیبی آماده است ولی سایت واقعاً ضبط می‌کند، دکمهٔ شروع دستی سیگنال را بزن و تا پایان آن ضبط کن. اگر اصلاً ورودی پیدا نشد، حالت سازگاریِ همان سایت را فعال کن، پیش‌نویس را ذخیره کن، تب را دوباره بارگذاری و آزمایش را تکرار کن.
-5. وویس ارسالی را در طرف گیرنده دانلود کن و همان فایل دریافت‌شده را بخوان؛ پیش‌نمایش محلی فرستنده برای اثبات انتقال کافی نیست.
-6. دریافت از صدای تب را از ابتدای وویس امتحان کن. سپس توقف، لغو، حذف دسترسی سایت و رفتن به تب دیگر را بررسی کن.
-
-هیچ متن، رمز یا فایل صوتی از آزمایش‌ها در ZIP قرار نگرفته است.
+These are evidence boundaries, not a claim that public-store review has passed. There is no independent penetration-test certificate or universal messenger-compatibility claim.

@@ -496,8 +496,10 @@
   }
 
   // src/codec.mjs
+  var SAMPLE_RATE = 48e3;
   var MAX_TEXT_BYTES = 2e3;
   var MAX_AUDIO_SECONDS = 120;
+  var MAX_SIGNAL_SECONDS = 117;
   var MAX_FILE_BYTES = 25 * 1024 * 1024;
   var PROFILES = Object.freeze({
     fast: { id: 1, symbolSeconds: 0.022, frequencies: Array.from({ length: 16 }, (_, i2) => 1e3 + i2 * 400), preamble: 7800, marker: 600, amplitude: 0.68 },
@@ -549,7 +551,13 @@
     const check = crc16(packet.subarray(0, -2));
     packet[packet.length - 2] = check >> 8;
     packet[packet.length - 1] = check & 255;
+    if (signalDuration(packet.length, profileId === 1 ? "fast" : "hidden") > MAX_SIGNAL_SECONDS) throw new CodecError("signalTooLong");
     return packet;
+  }
+  function signalDuration(packetLength, profileName = "fast") {
+    const p = PROFILES[profileName];
+    if (!p || !Number.isInteger(packetLength) || packetLength < 9 || packetLength > MAX_TEXT_BYTES + 45) throw new CodecError("invalidPacket");
+    return (Math.round(0.36 * SAMPLE_RATE) + packetLength * 2 * Math.floor(p.symbolSeconds * SAMPLE_RATE) + Math.round(0.06 * SAMPLE_RATE)) / SAMPLE_RATE;
   }
 
   // src/media.mjs
@@ -583,24 +591,28 @@
       this.cancel();
       return new Promise((resolve, reject) => {
         this.reject = reject;
-        const worker = this.worker = new Worker("./decoder.worker.js");
-        this.timeout = setTimeout(() => {
-          this.cancel("decodeTimeout");
-        }, 45e3);
-        worker.onmessage = ({ data }) => {
-          if (data.progress != null) {
-            onProgress(data.progress);
-            return;
-          }
-          clearTimeout(this.timeout);
-          worker.terminate();
-          this.worker = null;
-          this.reject = null;
-          if (data.error) reject(Object.assign(new Error(data.error), { packet: data.packet }));
-          else resolve(data.result);
-        };
-        worker.onerror = () => this.cancel("decodeError");
-        worker.postMessage(packet ? { id: 1, packet, password } : { id: 1, ...audio, password });
+        try {
+          const worker = this.worker = new Worker("./decoder.worker.js");
+          this.timeout = setTimeout(() => {
+            this.cancel("decodeTimeout");
+          }, 45e3);
+          worker.onmessage = ({ data }) => {
+            if (data.progress != null) {
+              onProgress(data.progress);
+              return;
+            }
+            clearTimeout(this.timeout);
+            worker.terminate();
+            this.worker = null;
+            this.reject = null;
+            if (data.error) reject(Object.assign(new Error(data.error), { packet: data.packet }));
+            else resolve(data.result);
+          };
+          worker.onerror = () => this.cancel("decodeError");
+          worker.postMessage(packet ? { id: 1, packet, password } : { id: 1, ...audio, password });
+        } catch {
+          this.cancel("decodeError");
+        }
       });
     }
     cancel(code = "cancelled") {
@@ -623,6 +635,16 @@
   // src/i18n.mjs
   var I18N = {
     fa: {
+      heroTitle: "\u062D\u0631\u0641\u200C\u0647\u0627\u06CC\u062A \u0631\u0627 \u0628\u0627 \u0635\u062F\u0627 \u0628\u0641\u0631\u0633\u062A.",
+      heroTip: "\u06CC\u06A9 \u067E\u06CC\u0627\u0645 \u06A9\u0648\u062A\u0627\u0647 \u0628\u0633\u0627\u0632\u060C \u0628\u0627 \u0648\u0648\u06CC\u0633 \u0647\u0645\u0631\u0627\u0647\u0634 \u06A9\u0646 \u0648 \u0627\u0632 \u0635\u062F\u0627 \u062F\u0648\u0628\u0627\u0631\u0647 \u0628\u062E\u0648\u0627\u0646.",
+      localBadge: "\u067E\u0631\u062F\u0627\u0632\u0634 \u0645\u062D\u0644\u06CC \xB7 \u0646\u0633\u062E\u0647\u0654 \u0622\u0632\u0645\u0627\u06CC\u0634\u06CC",
+      composeTitle: "\u067E\u06CC\u0627\u0645\u062A \u0631\u0627 \u0622\u0645\u0627\u062F\u0647 \u06A9\u0646",
+      signalSettings: "\u0631\u0645\u0632 \u0648 \u062A\u0646\u0638\u06CC\u0645\u0627\u062A \u0633\u06CC\u06AF\u0646\u0627\u0644",
+      passwordTip: "\u0631\u0645\u0632\u060C \u0645\u062A\u0646 \u0631\u0627 \u0631\u0645\u0632\u06AF\u0630\u0627\u0631\u06CC \u0645\u06CC\u200C\u06A9\u0646\u062F. \u0622\u0646 \u0631\u0627 \u0627\u0632 \u06CC\u06A9 \u0645\u0633\u06CC\u0631 \u062C\u062F\u0627 \u0628\u0647 \u06AF\u06CC\u0631\u0646\u062F\u0647 \u0628\u062F\u0647.",
+      fileLimits: "WAV \xB7 WebM \xB7 OGG \xB7 MP3 / \u062A\u0627 \u06F2\u06F5 \u0645\u06AF\u0627\u0628\u0627\u06CC\u062A \u0648 \u06F2 \u062F\u0642\u06CC\u0642\u0647",
+      clearSession: "\u067E\u0627\u06A9 \u06A9\u0631\u062F\u0646 \u0645\u062A\u0646\u060C \u0631\u0645\u0632 \u0648 \u0646\u062A\u06CC\u062C\u0647",
+      sessionCleared: "\u0645\u062A\u0646\u060C \u0631\u0645\u0632 \u0648 \u0646\u062A\u06CC\u062C\u0647 \u0627\u0632 \u0627\u06CC\u0646 \u067E\u0646\u0644 \u067E\u0627\u06A9 \u0634\u062F\u0646\u062F.",
+      signalTooLong: "\u0635\u062F\u0627\u06CC \u0627\u06CC\u0646 \u067E\u06CC\u0627\u0645 \u0637\u0648\u0644\u0627\u0646\u06CC\u200C\u062A\u0631 \u0627\u0632 \u0638\u0631\u0641\u06CC\u062A \u0627\u0633\u062A. \u0645\u062A\u0646 \u0631\u0627 \u06A9\u0648\u062A\u0627\u0647\u200C\u062A\u0631 \u06A9\u0646 \u06CC\u0627 \u062D\u0627\u0644\u062A \u0648\u0627\u0636\u062D \u0631\u0627 \u0627\u0646\u062A\u062E\u0627\u0628 \u06A9\u0646.",
       step2: "\u06F2",
       mixPrivacy: "\u0645\u062A\u0646 \u0648 \u0635\u0648\u062A \u0645\u062D\u0644\u06CC \u067E\u0631\u062F\u0627\u0632\u0634 \u0645\u06CC\u200C\u0634\u0648\u0646\u062F\u061B \u0633\u0627\u06CC\u062A \u0628\u0647 \u0648\u0648\u06CC\u0633 \u062A\u0631\u06A9\u06CC\u0628\u06CC \u062F\u0633\u062A\u0631\u0633\u06CC \u062F\u0627\u0631\u062F. \u0628\u0631\u0627\u06CC \u0645\u062A\u0646 \u062E\u0635\u0648\u0635\u06CC \u0631\u0645\u0632 \u062A\u0639\u06CC\u06CC\u0646 \u06A9\u0646.",
       privacyLink: "\u062D\u0631\u06CC\u0645 \u062E\u0635\u0648\u0635\u06CC",
@@ -745,6 +767,16 @@
       back: "\u0628\u0631\u06AF\u0634\u062A \u0628\u0647 \u0627\u0641\u0632\u0648\u0646\u0647: \u0631\u0648\u06CC \u0622\u06CC\u06A9\u0648\u0646 SonicQR \u062F\u0631 \u062A\u0628 \u067E\u06CC\u0627\u0645\u200C\u0631\u0633\u0627\u0646 \u06A9\u0644\u06CC\u06A9 \u06A9\u0646."
     },
     en: {
+      heroTitle: "Let your voice carry more.",
+      heroTip: "Create a short message. Mix it into a voice recording. Read it back from sound.",
+      localBadge: "Processed locally \xB7 Beta",
+      composeTitle: "Prepare your message",
+      signalSettings: "Password & signal settings",
+      passwordTip: "A password encrypts the text. Share it with the recipient through a separate channel.",
+      fileLimits: "WAV \xB7 WebM \xB7 OGG \xB7 MP3 / up to 25 MB, 2 minutes",
+      clearSession: "Clear text, passwords & result",
+      sessionCleared: "Text, passwords and result cleared from this panel.",
+      signalTooLong: "This message exceeds the audio capacity. Shorten the text or choose audible mode.",
       step2: "2",
       mixPrivacy: "Text and audio are processed locally; the site receives the mixed voice. Use a password for private text.",
       privacyLink: "Privacy policy",

@@ -1,6 +1,6 @@
 # SonicQR privacy policy
 
-Last updated: 6 October 2026.
+Last updated: 25 October 2026.
 
 The complete Persian and English policy is in `privacy.html`. It can be read inside the extension and published with `privacy.css` on the publisher's HTTPS site.
 
@@ -12,7 +12,7 @@ When you arm mixing, the destination site receives mixed audio. Sending that rec
 
 Recovered text and sanitized diagnostics enter the clipboard only after a Copy action. Reports contain the version, destination origin, states, counters, duration and output level, but no message, password, packet or audio samples. No reports are sent automatically. Support information that you voluntarily send is used to answer your request.
 
-Data is used only for text-in-voice functionality and requested troubleshooting. It is not sold, used for ads, profiling or credit decisions. Optional site grants can be removed in the panel; reload the site to remove already loaded hooks. Revoke microphone access in browser/OS settings. Material data-handling changes must be reflected in a new extension and policy version. For questions, use the publisher's contact/support information in the SonicQR Chrome Web Store listing.
+Data is used only for text-in-voice functionality and requested troubleshooting. It is not sold, used for ads, profiling or credit decisions. Optional site grants can be removed in the panel; reload the site to remove already loaded hooks. Revoke microphone access in browser/OS settings. Material data-handling changes must be reflected in a new extension and policy version. For questions, use the repository's support page at https://github.com/maboox/SonicQrChrome/issues.
 
 ## خلاصهٔ فارسی
 

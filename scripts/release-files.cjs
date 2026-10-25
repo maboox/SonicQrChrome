@@ -6,5 +6,5 @@ module.exports = [
   'assets/icon-48.png', 'assets/icon-128.png',
   '_locales/fa/messages.json', '_locales/en/messages.json',
   'privacy.html', 'privacy.css', 'PRIVACY.md', 'LICENSE',
-  'THIRD_PARTY_NOTICES.md', 'licenses/fflate-MIT.txt',
+  'THIRD_PARTY_NOTICES.md', 'licenses/fflate-MIT.txt', 'licenses/lucide-ISC.txt',
 ];

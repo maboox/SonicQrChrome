@@ -3,6 +3,7 @@ import { deflateSync, inflateSync } from 'fflate';
 export const SAMPLE_RATE = 48000;
 export const MAX_TEXT_BYTES = 2000;
 export const MAX_AUDIO_SECONDS = 120;
+export const MAX_SIGNAL_SECONDS = 117;
 export const MAX_FILE_BYTES = 25 * 1024 * 1024;
 export const PROFILES = Object.freeze({
   fast: { id: 1, symbolSeconds: 0.022, frequencies: Array.from({ length: 16 }, (_, i) => 1000 + i * 400), preamble: 7800, marker: 600, amplitude: 0.68 },
@@ -48,6 +49,7 @@ export async function makePacket(text, password = '', profileId = 1) {
   packet.set(data, 7);
   const check = crc16(packet.subarray(0, -2));
   packet[packet.length - 2] = check >> 8; packet[packet.length - 1] = check & 255;
+  if (signalDuration(packet.length, profileId === 1 ? 'fast' : 'hidden') > MAX_SIGNAL_SECONDS) throw new CodecError('signalTooLong');
   return packet;
 }
 export async function unpackPacket(packet, password = '') {
@@ -69,8 +71,17 @@ export async function unpackPacket(packet, password = '') {
     } catch { throw new CodecError('invalidPacket'); }
   }
   if (data.length > MAX_TEXT_BYTES) throw new CodecError('messageTooLong');
-  try { return { text: new TextDecoder('utf-8', { fatal: true }).decode(data), profile: packet[3] === 1 ? 'fast' : 'hidden' }; }
+  try {
+    const text = new TextDecoder('utf-8', { fatal: true }).decode(data);
+    if (!text.trim() || Array.from(text).length > 500) throw new Error();
+    return { text, profile: packet[3] === 1 ? 'fast' : 'hidden' };
+  }
   catch { throw new CodecError('invalidPacket'); }
+}
+export function signalDuration(packetLength, profileName = 'fast') {
+  const p = PROFILES[profileName];
+  if (!p || !Number.isInteger(packetLength) || packetLength < 9 || packetLength > MAX_TEXT_BYTES + 45) throw new CodecError('invalidPacket');
+  return (Math.round(.36 * SAMPLE_RATE) + packetLength * 2 * Math.floor(p.symbolSeconds * SAMPLE_RATE) + Math.round(.06 * SAMPLE_RATE)) / SAMPLE_RATE;
 }
 function writeTone(out, start, count, frequency, amplitude) {
   const fade = Math.min(150, Math.floor(count / 7));
@@ -82,6 +93,8 @@ function writeTone(out, start, count, frequency, amplitude) {
 export function modulate(packet, profileName = 'fast', amplitude) {
   const p = PROFILES[profileName];
   if (!p) throw new CodecError('invalidPacket');
+  if (signalDuration(packet.length, profileName) > MAX_SIGNAL_SECONDS) throw new CodecError('signalTooLong');
+  if (amplitude != null && (!Number.isFinite(amplitude) || amplitude < 0 || amplitude > 1)) throw new CodecError('invalidPacket');
   const symbolLength = Math.floor(p.symbolSeconds * SAMPLE_RATE);
   const dataStart = Math.round(0.36 * SAMPLE_RATE);
   const out = new Float32Array(dataStart + packet.length * 2 * symbolLength + Math.round(0.06 * SAMPLE_RATE));
@@ -111,6 +124,7 @@ export function waveBytes(samples, sampleRate = SAMPLE_RATE) {
   return bytes;
 }
 export function resample(samples, sourceRate, targetRate = SAMPLE_RATE) {
+  if (![sourceRate, targetRate].every(rate => Number.isFinite(rate) && rate >= 8000 && rate <= 192000)) throw new CodecError('sampleRateLow');
   if (sourceRate === targetRate) return samples;
   const result = new Float32Array(Math.round(samples.length * targetRate / sourceRate));
   for (let i = 0; i < result.length; i++) {
@@ -185,6 +199,7 @@ function markerCandidates(samples, sampleRate, profile) {
     .map(g => ({ start: g.last + window / 2 + 0.05 * sampleRate, score: g.score }));
 }
 export async function decodeSamples(input, sampleRate, password = '', onProgress = () => {}) {
+  if (!Number.isFinite(sampleRate) || sampleRate > 192000 || sampleRate < 16000) throw new CodecError('sampleRateLow');
   if (!input.length || input.length / sampleRate > MAX_AUDIO_SECONDS + 0.1) throw new CodecError('audioTooLong');
   if (sampleRate < 16000) throw new CodecError('sampleRateLow');
   let foundPacket = null;

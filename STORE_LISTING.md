@@ -1,6 +1,6 @@
 # Chrome Web Store listing and privacy fields
 
-Prepared for SonicQR 0.3.0, 6 October 2026. Copy the values into the corresponding dashboard fields; use the real publisher's public privacy-policy URL and support/contact information.
+Prepared for SonicQR 0.4.0, 6 October 2026. Copy the values into the corresponding dashboard fields; use the real publisher's public privacy-policy URL and support/contact information.
 
 ## Single purpose — English
 

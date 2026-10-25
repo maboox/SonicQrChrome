@@ -1,0 +1,7 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Public MAIN-world hook identifier; these exact strings are not credentials"
+regexTarget = "secret"
+regexes = ['''^__sonicQRMixerV[12]__$''', '''^globalThis\.__sonicQRMixerV[12]__$''']

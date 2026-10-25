@@ -30,7 +30,8 @@ async function scriptId(pattern) {
 }
 async function run(message) {
   const { type, tabId } = message;
-  if (type === 'ARM') { await install(tabId); const status = await command(tabId, 'arm', [message.config]); await chrome.action.setBadgeText({ tabId, text: 'ON' }); await chrome.action.setBadgeBackgroundColor({ tabId, color: '#087f75' }); return status; }
+  if (!Number.isInteger(tabId) || tabId < 0) throw new Error('unsupportedTab');
+  if (type === 'ARM') { await install(tabId); const status = await command(tabId, 'arm', [message.config]); await chrome.action.setBadgeText({ tabId, text: 'ON' }); await chrome.action.setBadgeBackgroundColor({ tabId, color: '#7c3aed' }); return status; }
   if (type === 'DISARM') { const status = await command(tabId, 'disarm'); await chrome.action.setBadgeText({ tabId, text: '' }); return status; }
   if (type === 'START_SIGNAL') return command(tabId, 'startSignal');
   if (type === 'STATUS') {
@@ -60,12 +61,13 @@ async function run(message) {
     const tab = await chrome.tabs.get(tabId);
     if (!allowedTab(tab)) return { enabled: false };
     const pattern = new URL(tab.url).origin + '/*';
-    return { enabled: await chrome.permissions.contains({ origins: [pattern] }) };
+    const registered = await chrome.scripting.getRegisteredContentScripts({ ids: [await scriptId(pattern)] });
+    return { enabled: registered.length > 0 && await chrome.permissions.contains({ origins: [pattern] }) };
   }
   throw new Error('unknownCommand');
 }
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
-  if (!sender.url?.startsWith(extensionOrigin) || sender.id !== chrome.runtime.id || !['ARM', 'DISARM', 'START_SIGNAL', 'STATUS', 'ENABLE_SITE', 'DISABLE_SITE', 'SITE_STATE'].includes(message?.type)) return;
+  if (sender.url !== extensionOrigin + 'panel.html' || sender.id !== chrome.runtime.id || !['ARM', 'DISARM', 'START_SIGNAL', 'STATUS', 'ENABLE_SITE', 'DISABLE_SITE', 'SITE_STATE'].includes(message?.type)) return;
   run(message).then(result => respond({ ok: true, result }), error => respond({ ok: false, error: error.message }));
   return true;
 });

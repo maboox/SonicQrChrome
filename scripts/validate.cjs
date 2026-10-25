@@ -59,4 +59,6 @@ for (const name of files.filter(name => name.endsWith('.js'))) {
 }
 assert.ok(read('THIRD_PARTY_NOTICES.md').includes('fflate 0.8.3'));
 assert.ok(read('licenses/fflate-MIT.txt').includes('Permission is hereby granted'));
+assert.ok(read('licenses/lucide-ISC.txt').includes('Permission to use'));
+assert.ok(read('THIRD_PARTY_NOTICES.md').includes(`Lucide ${pkg.devDependencies.lucide}`));
 console.log(`Validated ${files.length} allowed runtime files, MV3 permissions, locales, icons, CSP, licenses and executable syntax.`);

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { makePacket, unpackPacket, modulate, decodeSamples, mixCover, waveBytes, crc16, resample } from '../src/codec.mjs';
+import { makePacket, unpackPacket, modulate, decodeSamples, mixCover, waveBytes, crc16, resample, signalDuration, MAX_SIGNAL_SECONDS } from '../src/codec.mjs';
 const messages = ['Hello from Audio QR', 'سلام، این یک پیام فارسی است 👋', 'Repeat '.repeat(50)];
 for (const message of messages) test(`UTF-8 packet round trip: ${message.slice(0, 20)}`, async () => {
   const packet = await makePacket(message);
@@ -73,4 +73,26 @@ test('Integrity-valid oversized compressed payload is bounded and rejected', asy
 test('Arbitrary file data fails rather than becoming decoded text', async () => {
   const samples = Float32Array.from({ length: 100000 }, (_, i) => Math.sin(i * 1.382) * 0.1);
   await assert.rejects(decodeSamples(samples, 48000), { code: 'noMessage' });
+});
+
+test('Signals must fit the receiver time limit, including encrypted and multibyte messages', async () => {
+  let seed = 123;
+  const text = Array.from({length: 500}, () => {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    return String.fromCodePoint(0x10000 + seed % 0x100000);
+  }).join('');
+  for (const profile of ['fast', 'hidden']) {
+    const packet = await makePacket(text, 'secret', profile === 'fast' ? 1 : 2);
+    assert.ok(signalDuration(packet.length, profile) <= MAX_SIGNAL_SECONDS);
+    assert.ok(modulate(packet, profile).length / 48000 <= MAX_SIGNAL_SECONDS);
+  }
+  assert.throws(() => modulate(new Uint8Array(3000), 'hidden'), {code:'invalidPacket'});
+  assert.throws(() => modulate(new Uint8Array(9), 'fast', NaN), {code:'invalidPacket'});
+});
+
+test('Non-finite and impossible sample rates fail promptly', async () => {
+  for (const rate of [NaN, Infinity, 0, -1, 1000000]) {
+    await assert.rejects(decodeSamples(new Float32Array(10), rate), {code:'sampleRateLow'});
+    assert.throws(() => resample(new Float32Array(10), rate), {code:'sampleRateLow'});
+  }
 });

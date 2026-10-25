@@ -1,3 +1,15 @@
+# 0.4.0 — 2026-10-25
+
+- Redesign the side panel with a violet palette, light/dark themes, bilingual onboarding, a new logo and locally bundled Lucide icons.
+- Group optional encryption/strength settings and recording diagnostics into disclosures; simplify primary send/read actions.
+- Add accessible keyboard tabs, session clearing, selected-site origin display and clearer capacity/privacy guidance.
+- Ignore stale target lookups and polling responses; defer target changes during active operations and recover from a closed remembered tab.
+- Restrict background commands to the exact panel sender and valid tab identifiers; report compatibility only when its early hook is registered.
+- Release acquired capture tracks on AudioContext construction/setup failure, close capture ports, and clean up workers on construction/post failure.
+- Bound modulation inputs and sample rates; explicitly verify that maximum UTF-8/encrypted messages fit the audio time budget. Retain v3 compatibility.
+- Update Playwright to 1.63.0, add focused regression tests, bilingual documentation, architecture/security policies, issue templates and refreshed screenshots.
+- Remove personal commit email metadata from the reachable history, replace it with GitHub's noreply identity, and retire the superseded dependency branch.
+
 # 0.3.0 — 2026-10-06
 
 - Add a strict release-file allowlist, ZIP-root manifest, staged unpacked bundle, checksums and build report.

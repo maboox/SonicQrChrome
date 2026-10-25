@@ -7,3 +7,11 @@ dist/
 *.pem
 .env
 .env.*
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.bundle
+playwright-report/
+test-results/

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="620" viewBox="0 0 1600 620" fill="none">
+  <defs><linearGradient id="bg" x2="1600" y2="620" gradientUnits="userSpaceOnUse"><stop stop-color="#1c102e"/><stop offset=".6" stop-color="#3d1968"/><stop offset="1" stop-color="#6d32ae"/></linearGradient><linearGradient id="wave" x1="1010" x2="1500" gradientUnits="userSpaceOnUse"><stop stop-color="#9262d2"/><stop offset="1" stop-color="#e0c1ff"/></linearGradient></defs>
+  <rect width="1600" height="620" rx="30" fill="url(#bg)"/>
+  <g stroke="#c4a0ee" stroke-opacity=".1"><circle cx="1310" cy="300" r="160"/><circle cx="1310" cy="300" r="235"/><circle cx="1310" cy="300" r="310"/><circle cx="1310" cy="300" r="385"/></g>
+  <rect x="94" y="82" width="254" height="36" rx="18" fill="#c9a1ff" fill-opacity=".12" stroke="#b88ce7" stroke-opacity=".3"/>
+  <circle cx="116" cy="100" r="5" fill="#d7b0ff"/>
+  <text x="133" y="106" font-family="Segoe UI,Arial,sans-serif" font-size="14" fill="#ddc7f5" letter-spacing="2">LOCAL. PRIVATE. SONIC.</text>
+  <text x="89" y="257" font-family="Segoe UI,Arial,sans-serif" font-size="116" font-weight="700" fill="white" letter-spacing="-6">SonicQR</text>
+  <text x="96" y="328" font-family="Segoe UI,Arial,sans-serif" font-size="33" fill="#ead9fc">Let your voice carry more.</text>
+  <text x="98" y="389" font-family="Segoe UI,Arial,sans-serif" font-size="21" fill="#c1a5dd">Short text inside sound. Built for your browser.</text>
+  <g font-family="Segoe UI,Arial,sans-serif" font-size="15" fill="#d9c3ef"><text x="98" y="512">CHROME EXTENSION</text><circle cx="290" cy="506" r="3" fill="#9465bf"/><text x="310" y="512">ENGLISH + فارسی</text><circle cx="492" cy="506" r="3" fill="#9465bf"/><text x="512" y="512">OPEN SOURCE</text></g>
+  <g stroke="url(#wave)" stroke-width="18" stroke-linecap="round"><path d="M1000 284v54m40-91v129m40-174v217m40-121v26m40-175v323m40-226v129m40-98v66m40-151v235m40-205v175m40-128v80m40-164v253m40-190v127m40-90v54"/></g>
+  <rect x="1080" y="137" width="204" height="52" rx="16" fill="#fff" fill-opacity=".09" stroke="#fff" stroke-opacity=".17"/><text x="1100" y="171" font-family="Segoe UI,Arial,sans-serif" font-size="23" fill="#f2e7ff">Hello! / سلام!</text>
+</svg>

@@ -1,6 +1,8 @@
 (() => {
   // src/codec.mjs
   var SAMPLE_RATE = 48e3;
+  var MAX_TEXT_BYTES = 2e3;
+  var MAX_SIGNAL_SECONDS = 117;
   var MAX_FILE_BYTES = 25 * 1024 * 1024;
   var PROFILES = Object.freeze({
     fast: { id: 1, symbolSeconds: 0.022, frequencies: Array.from({ length: 16 }, (_, i) => 1e3 + i * 400), preamble: 7800, marker: 600, amplitude: 0.68 },
@@ -22,6 +24,11 @@
     }
     return crc;
   }
+  function signalDuration(packetLength, profileName = "fast") {
+    const p = PROFILES[profileName];
+    if (!p || !Number.isInteger(packetLength) || packetLength < 9 || packetLength > MAX_TEXT_BYTES + 45) throw new CodecError("invalidPacket");
+    return (Math.round(0.36 * SAMPLE_RATE) + packetLength * 2 * Math.floor(p.symbolSeconds * SAMPLE_RATE) + Math.round(0.06 * SAMPLE_RATE)) / SAMPLE_RATE;
+  }
   function writeTone(out, start, count, frequency, amplitude) {
     const fade = Math.min(150, Math.floor(count / 7));
     for (let i = 0; i < count; i++) {
@@ -32,6 +39,8 @@
   function modulate(packet, profileName = "fast", amplitude) {
     const p = PROFILES[profileName];
     if (!p) throw new CodecError("invalidPacket");
+    if (signalDuration(packet.length, profileName) > MAX_SIGNAL_SECONDS) throw new CodecError("signalTooLong");
+    if (amplitude != null && (!Number.isFinite(amplitude) || amplitude < 0 || amplitude > 1)) throw new CodecError("invalidPacket");
     const symbolLength = Math.floor(p.symbolSeconds * SAMPLE_RATE);
     const dataStart = Math.round(0.36 * SAMPLE_RATE);
     const out = new Float32Array(dataStart + packet.length * 2 * symbolLength + Math.round(0.06 * SAMPLE_RATE));
@@ -113,6 +122,7 @@
       const p = Uint8Array.from(config?.packet || []);
       if (!Array.isArray(config?.packet) || config.packet.some((x) => !Number.isInteger(x) || x < 0 || x > 255) || p.length < 9 || p.length > 2045 || p[0] !== 83 || p[1] !== 81 || p[2] !== 3 || p[3] !== PROFILES[config.profile]?.id || p[4] & ~3 || p.length !== 9 + p[5] * 256 + p[6] || crc16(p.subarray(0, -2)) !== p.at(-2) * 256 + p.at(-1)) throw new Error("invalidPacket");
       if (!Number.isFinite(config.amplitude) || config.amplitude < 0.025 || config.amplitude > (config.profile === "hidden" ? 0.12 : 0.42)) throw new Error("invalidPacket");
+      if (signalDuration(p.length, config.profile) > MAX_SIGNAL_SECONDS) throw new Error("signalTooLong");
       return { packet: p, profile: config.profile, amplitude: config.amplitude, expiresAt: Date.now() + 12e4 };
     }
     function attachTone(s, config) {

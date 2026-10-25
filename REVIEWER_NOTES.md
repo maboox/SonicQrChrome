@@ -1,4 +1,4 @@
-# Reviewer test instructions — SonicQR 0.3.0
+# Reviewer test instructions — SonicQR 0.4.0
 
 No extension account, API key, paid service or messenger account is needed for the internal test. Chrome 116+ is required. The interface starts in Persian; use EN at the top to switch to English.
 

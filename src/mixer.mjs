@@ -1,4 +1,4 @@
-import { modulate, PROFILES, SAMPLE_RATE, crc16 } from './codec.mjs';
+import { modulate, PROFILES, SAMPLE_RATE, crc16, signalDuration, MAX_SIGNAL_SECONDS } from './codec.mjs';
 
 // MAIN world: intercept microphone consumers, not only one recorder constructor.
 const KEY = '__sonicQRMixerV2__';
@@ -49,6 +49,7 @@ function install() {
     const p = Uint8Array.from(config?.packet || []);
     if (!Array.isArray(config?.packet) || config.packet.some(x => !Number.isInteger(x) || x < 0 || x > 255) || p.length < 9 || p.length > 2045 || p[0] !== 83 || p[1] !== 81 || p[2] !== 3 || p[3] !== PROFILES[config.profile]?.id || p[4] & ~3 || p.length !== 9 + p[5] * 256 + p[6] || crc16(p.subarray(0, -2)) !== p.at(-2) * 256 + p.at(-1)) throw new Error('invalidPacket');
     if (!Number.isFinite(config.amplitude) || config.amplitude < 0.025 || config.amplitude > (config.profile === 'hidden' ? 0.12 : 0.42)) throw new Error('invalidPacket');
+    if (signalDuration(p.length, config.profile) > MAX_SIGNAL_SECONDS) throw new Error('signalTooLong');
     return { packet: p, profile: config.profile, amplitude: config.amplitude, expiresAt: Date.now() + 120000 };
   }
   function attachTone(s, config) {

@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability / آسیب‌پذیری امنیتی
+    url: https://github.com/maboox/SonicQrChrome/security/advisories/new
+    about: Report sensitive issues privately.

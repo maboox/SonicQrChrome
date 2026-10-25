@@ -1,105 +1,106 @@
-# SonicQR Chrome · نسخهٔ آزمایشی ۰٫۳٫۰
+<div align="center">
 
-افزونه‌ای مستقل برای نوشتن متن کوتاه، ترکیب سیگنال متن با وویس، و خواندن متن از وویس. **برای نصب، بیلد یا GitHub Actions لازم نیست**؛ فایل‌های آمادهٔ افزونه در همین پوشه هستند. سورس و تست‌ها هم همراه آن‌اند. این ZIP پروژهٔ اندروید/ویندوز را تغییر نمی‌دهد.
+![SonicQR — Let your voice carry more](assets/banner.svg)
 
-## انتشار و GitHub Actions
+**Short text inside sound. Processed locally. Built for Chrome.**
 
-این ZIP **سورس پروژه** است. فایل جداگانهٔ `SonicQR-Chrome-WebStore.zip` برای آپلود فروشگاه است. دستور `npm run package` بیلد، اعتبارسنجی و ساخت ZIP با manifest در ریشه را انجام می‌دهد. خروجی فقط فایل‌های اجرای افزونه را دارد؛ سورس، تست‌ها، recordings و node_modules وارد آن نمی‌شوند.
+[![Build & test](https://github.com/maboox/SonicQrChrome/actions/workflows/build.yml/badge.svg)](https://github.com/maboox/SonicQrChrome/actions/workflows/build.yml)
+![Version](https://img.shields.io/badge/version-0.4.0-8045d9?style=flat-square)
+![Chrome 116+](https://img.shields.io/badge/Chrome-116%2B-6d28d9?style=flat-square&logo=googlechrome&logoColor=white)
+[![MIT license](https://img.shields.io/badge/license-MIT-a78bfa?style=flat-square)](LICENSE)
+![No telemetry](https://img.shields.io/badge/telemetry-none-46305f?style=flat-square)
 
-راهنمای گام‌به‌گام فارسی در `PUBLISHING.md` است. متن فرم‌ها در `STORE_LISTING.md`، دستورهای بررسی در `REVIEWER_NOTES.md` و تصاویر آماده در `store-assets` هستند. سیاست حریم خصوصی فارسی/انگلیسی در `privacy.html` است؛ این فایل و `privacy.css` را روی هاست عمومی قرار بده و URL واقعی آن را در فروشگاه ثبت کن.
+[**⬇ Download**](https://github.com/maboox/SonicQrChrome/releases/tag/v0.4.0) · [**راهنمای فارسی**](docs/README.fa.md) · [**Privacy**](PRIVACY.md) · [**Report a bug**](https://github.com/maboox/SonicQrChrome/issues/new/choose)
 
-`.github/workflows/build.yml` را همراه بقیهٔ فایل‌ها در ریشهٔ repository قرار بده. با Push یا Run workflow بیلد و تست‌ها انجام می‌شوند و ZIP آمادهٔ فروشگاه به‌صورت دانلود مستقیم در Artifacts ظاهر می‌شود. هیچ Secret یا کلید امضایی لازم نیست. این workflow فقط بسته می‌سازد؛ حساب فروشگاه، فرم‌ها و انتشار نهایی با خود ناشر است.
+</div>
 
-## به‌روزرسانی از نسخهٔ قبلی
+SonicQR is an open-source Chrome side-panel extension that turns a short text message into an audio signal, mixes that signal into a website's voice recording, and recovers the text from an audio file or playing tab. A built-in recording lab lets you test the complete process before using a messenger.
 
-فایل‌های این ZIP را جایگزین پوشهٔ قبلی کن و در `chrome://extensions` روی **Reload** افزونه بزن. **تب پیام‌رسان و صفحهٔ آزمایش داخلی را هم دوباره بارگذاری کن.** بالای پنل باید `Beta 0.3.0` دیده شود. کد ترکیبِ نسخهٔ قبلی در تب بازشده باقی می‌ماند و بدون بارگذاری مجدد قابل جایگزینی امن نیست.
+> **Beta:** the browser recording paths are tested. Delivery through a messenger's compression is **not universally verified**. Start with a short audible message and decode the actual received file before relying on a service. High-frequency mode is experimental and may be filtered out entirely.
 
-این نسخه ورودی `getUserMedia`، ضبط استاندارد `MediaRecorder` و مصرف صوت در `Web Audio` را پوشش می‌دهد. شروع سیگنال تا اتصال مصرف‌کنندهٔ صوت صبر می‌کند، تا سایت‌هایی که میکروفون را زودتر آماده می‌کنند، ابتدای پیام را از دست ندهند. خطای مجوز یا معلق‌بودن صدا در وضعیت افزونه دیده می‌شود؛ در مسیر هم‌زمانِ ضبط استاندارد، اگر صدا معلق باشد ورودی اصلی سایت حفظ می‌شود.
+## A small studio beside your browser
 
-## نصب در کروم ویندوز
+| Write & prepare | Listen & recover |
+|:---:|:---:|
+| ![English send interface](store-assets/screenshot-en-send.png) | ![Persian receive interface](store-assets/screenshot-fa-read.png) |
 
-1. ZIP را Extract کن و پوشهٔ استخراج‌شده را در یک مسیر ثابت نگه دار.
-2. در نوار آدرس کروم `chrome://extensions` را باز کن.
-3. **Developer mode / حالت برنامه‌نویس** را روشن کن.
-4. **Load unpacked / بارگیری افزونهٔ بازشده** را بزن و پوشه‌ای را انتخاب کن که `manifest.json` داخل آن است.
-5. از منوی پازل کنار نوار آدرس، SonicQR را Pin کن. در تب وب پیام‌رسان روی آیکون آن کلیک کن؛ پنل کنار صفحه باز می‌شود.
+- **Two ways to read:** choose the original audio file, or capture the selected tab while its voice message plays.
+- **One-shot mixing:** arm one recording, then use the website's own record button. Nothing is sent automatically.
+- **Optional encryption:** password-based AES-256-GCM protects message contents. Share the password separately.
+- **English & فارسی:** full left-to-right and right-to-left interfaces, keyboard navigation, light and dark themes.
+- **Local by design:** bundled codec, decoder worker and Lucide icons. No analytics, account or backend.
+- **Visible control:** exact signal duration, recording status, cancellation, troubleshooting details and a session-clear button.
 
-Chrome 116 یا جدیدتر لازم است. کروم معمولی اندروید افزونهٔ دسکتاپ را اجرا نمی‌کند؛ این نسخه را روی کروم کامپیوتر تست کن.
+## Install
 
-## ابتدا آزمایش داخلی را انجام بده
+1. Download the `sonicqr-chrome-0.4.0-webstore.zip` asset from [Releases](https://github.com/maboox/SonicQrChrome/releases/tag/v0.4.0) and extract it into a permanent folder.
+2. Open `chrome://extensions`, enable **Developer mode**, and select **Load unpacked**.
+3. Select the folder containing `manifest.json`, then pin SonicQR to the toolbar.
+4. Open the messenger's **web tab** and click the SonicQR icon.
 
-در پایین پنل «آزمایش داخلی ضبط و استخراج متن» را بزن. متن کوتاه بنویس، حالت **واضح و شنیداری** را انتخاب کن و «شروع ضبط آزمایشی» را بزن. به درخواست میکروفون کروم اجازه بده. عادی صحبت کن، تا پیام «سیگنال کامل شد» صبر کن و «توقف و بررسی وویس» را بزن. فایل واقعاً با MediaRecorder به WebM/Opus ضبط شده و متن از همان فایل استخراج می‌شود. امکان دانلود وویس ترکیبی وجود دارد.
+Chrome 116 or newer on desktop is required. The ZIP is ready to load; building from source is optional. After an update, reload the extension **and the website tab** so that the old recording hook is removed. Chrome Web Store publication is a separate publisher step; this repository does not claim a store listing.
 
-این آزمون، ضبط مرورگر را بررسی می‌کند؛ انتقال واقعی از پیام‌رسان و فشرده‌سازی مجدد آن باید جداگانه بررسی شود. برای تست اولین پیام، متن بسیار کوتاه انتخاب کن.
+## Try it first
 
-## ارسال در پیام‌رسان وب
+Open **Test recording and decoding locally** at the bottom of the panel. Enter a short message, choose **Audible**, start recording, allow microphone access and speak normally. Wait until the signal finishes, then stop. The lab records real WebM/Opus audio and decodes that recording. You can download the mixed voice file.
 
-1. واتساپ وب، بله وب یا سایت مقصد را در تب باز کن و روی آیکون SonicQR در **همان تب** کلیک کن. افزونه خودش پیام یا فایل ارسال نمی‌کند.
-2. در پنل «ارسال پیام»، متن را بنویس و «ساخت سیگنال» را بزن. زمان دقیق نمایش داده می‌شود. در اولین تست از حالت واضح و قدرت متعادل استفاده کن.
-3. «فعال کردن ترکیب برای یک ضبط» را بزن. آماده‌بودن برای ضبط بعدی نمایش داده می‌شود. مهلت فعال‌بودن ۲ دقیقه است؛ فقط یک ضبط سیگنال می‌گیرد.
-4. **بعد از فعال‌سازی** دکمهٔ ضبط وویس خود سایت را بزن؛ میکروفون را به سایت اجازه بده و عادی صحبت کن.
-5. حداقل تا پایان زمان لازم ضبط کن و منتظر «سیگنال کامل شد» بمان. زود متوقف‌کردن یا مکث‌کردن می‌تواند پیام را ناقص کند.
-6. ضبط را در سایت متوقف کن، در صورت وجود پیش‌نمایش وویس آن را بررسی کن و خودت ارسال کن.
-7. برای هر وویس جدید دوباره ترکیب را فعال کن. ویرایش متن، رمز، قدرت یا حالت، خروجی قبلی را باطل می‌کند.
+This tests the browser's recording codec. It does not simulate a messenger's server processing or prove compatibility with every microphone.
 
-«دانلود سیگنال WAV» فقط صدای متن است؛ وویس ترکیبی همان فایلی است که سایت ضبط کرده است. افزونه میکروفون را از بلندگوی تو پخش نمی‌کند؛ شنیدن صدای پیش‌نمایش یا تست فقط با کنترل پخش خودت انجام می‌شود.
+## Send a message
 
-## اگر سیگنال وارد ضبط نشد
+1. Click SonicQR on the destination site's tab. Write a short message and select **Create signal**.
+2. Optionally open **Password & signal settings** to encrypt the text or adjust signal strength.
+3. Select **Arm mixing for one recording**, then press the **website's** voice-record button and speak.
+4. Keep recording for the displayed time. Wait for the signal to finish, stop the website's recording, review it and send it yourself.
+5. Arm again for each new recording. An unused arm expires after two minutes.
 
-وضعیت «فعال است؛ هنوز مسیر ضبط پیدا نشده» فقط یعنی سیگنال منتظر است. «ورودی ترکیبی آماده است» یعنی ورودی میکروفون با خروجی ترکیبی جایگزین شده؛ «در حال اضافه شدن» یعنی سیگنال داخل همان خروجی شروع شده است. هیچ‌کدام به‌تنهایی تأیید ارسال یا حفظ پیام بعد از فشرده‌سازی سایت نیست. **برای تأیید، خود فایل ضبط‌شده یا فایل دریافت‌شده در طرف گیرنده را در بخش خواندن پیام انتخاب کن.** سطح خروجی فقط وجود صوت محلی را نشان می‌دهد.
+The signal WAV download contains the text signal alone. The **website's recording** contains voice plus signal. SonicQR never plays the microphone through your speakers.
 
-| وضعیت | اقدام |
-|---|---|
-| هنوز مسیر ضبط پیدا نشده | ضبط را متوقف کن؛ دسترسی سازگاری همان سایت را بده، پیش‌نویس را ذخیره و تب را دوباره بارگذاری کن؛ سپس دوباره ترکیب را فعال کن. |
-| ورودی ترکیبی آماده؛ ولی سایت واقعاً در حال ضبط است | «ضبط سایت شروع شده؛ سیگنال را اضافه کن» را بزن. از این لحظه تا پایان سیگنال ضبط را ادامه بده. این راه جایگزین برای مصرف‌کننده‌ای است که شروعش خودکار پیدا نمی‌شود. |
-| صدا معلق است | روی خود صفحهٔ سایت کلیک کن. در صورت ادامهٔ خطا، ترکیب را لغو، دوباره فعال و ضبط را از صفحهٔ سایت شروع کن. |
-| سیگنال در خروجی کامل شد؛ اما متن پیدا نشد | اولین تست را با متن بسیار کوتاه، حالت واضح و قدرت متعادل انجام بده. وویس را پخش و فایل اصلی آن را بررسی کن؛ فشرده‌سازی یا فیلتر سایت ممکن است سیگنال را خراب کرده باشد. |
+If a site prepares its recording functions early, open **Improve compatibility on this site**, grant access to that site, save your draft and reload the tab. The optional hook then loads at the start of that site's next page load. Remove access from the same section; reload its tabs to remove already-loaded hooks.
 
-در «سازگاری بیشتر با این سایت»، «دادن دسترسی فقط به همین سایت» را بزن و درخواست کروم را قبول کن. این دسترسی آماده‌سازی افزونه را از شروع بارگذاری همان سایت انجام می‌دهد. پیش‌نویس را ذخیره کن، تب را خودت دوباره بارگذاری کن و دوباره روی آیکون افزونه کلیک کن. دسترسی هر سایت از همان پنل قابل حذف است؛ پس از حذف نیز برای برداشتن کد قبلی، تب را دوباره بارگذاری کن.
+If the mixed microphone is ready but the site is already recording, use the manual signal-start button and keep recording from that moment until completion. Status describes the local output; **decode the received file to verify delivery**.
 
-«کپی گزارش عیب‌یابی» نسخه، مسیر ضبط، وضعیت صوت، زمان و بیشینهٔ سطح خروجی را کپی می‌کند. **متن، رمز، بستهٔ سیگنال و نمونه‌های صوت در گزارش نیستند.** گزارش فقط دامنهٔ سایت را درج می‌کند و آدرس کامل، پیش‌نویس یا پارامترهای URL را کپی نمی‌کند.
+## Read a message
 
-سایت می‌تواند میکروفون یا توابع ضبط را پیش از آماده‌سازی افزونه ذخیره کرده باشد. آماده‌سازی زودهنگام اغلب برای این حالت لازم است. فریم‌های دیگر، WebRTC و مصرف‌کننده‌های خاص پشتیبانی عمومی ندارند. افزونه فقط فریم اصلی همان صفحه را آماده می‌کند؛ تصویر و تماس ویدیویی را ترکیب نمی‌کند. اجازهٔ میکروفون همچنان توسط خود سایت و کروم گرفته می‌شود.
+- **File:** download the original received voice file and select it under **Read message**. Chrome-supported formats such as WAV, WebM, OGG/Opus, M4A and MP3 are accepted. Maximum: **25 MB and 120 seconds**.
+- **Tab audio:** click SonicQR on the playing tab, start listening, play the voice from its beginning, then select **Stop and extract text**. Only that tab is captured; its playback remains audible.
 
-## خواندن پیام
+For an encrypted message, enter the password and retry. A validated packet is cached in memory so a password retry does not repeat audio analysis. Recovered text is rendered as text, never HTML. **Clear text, passwords & result** removes the current panel's fields and cached result; it does not erase downloaded files or recordings held by a website.
 
-گیرنده هم این افزونه را نصب می‌کند. دو روش دارد:
+## Privacy & limits
 
-- **فایل:** وویس اصلی را از سایت دانلود کن و در «خواندن پیام» انتخاب کن. WAV، WebM، OGG/Opus و فرمت‌هایی که decoder کروم می‌خواند پذیرفته می‌شوند. سقف ۲۵ مگابایت و ۲ دقیقه است.
-- **صدای تب:** در تب پیام‌رسان روی آیکون افزونه کلیک کن. «شروع دریافت از صدای تب» را بزن؛ سپس وویس را در همان سایت از ابتدای آن پخش کن. بعد از پایان پخش، «توقف و استخراج متن» را بزن. هنگام دریافت، صدای همان تب همچنان برایت پخش می‌شود. صدای سایر برنامه‌ها یا تب‌ها دریافت نمی‌شود.
+The extension does not make network requests. The website still receives the mixed audio and can interfere with its own recording code. An unencrypted message can be decoded by anyone holding the audio. Encryption conceals the text; it does not hide the existence of the signal or authenticate who sent it.
 
-برای پیام رمزدار، رمز را وارد کن و تلاش دوباره را بزن. اگر بستهٔ صحیح پیدا شده باشد، اصلاح رمز به تحلیل دوبارهٔ صوت نیاز ندارد. متن استخراج‌شده را می‌توان کپی کرد.
+Only the interface language is saved persistently. The selected tab ID is kept in browser session storage. Message text, passwords, decoded results and audio are not saved as history. Optional site permissions and early-hook registrations remain until revoked. Diagnostics are copied only on request and include the site origin, version, route and timing, excluding message, password, signal packet, audio and full URL.
 
-## محدودیت مهم انتقال
+The recording adapter runs in the website's MAIN world to reach recording APIs. **The website is not a trusted security boundary.** Password derivation and encryption happen inside the extension before a packet is passed to it. See [Security](SECURITY.md), [Privacy](PRIVACY.md), and [Architecture](docs/ARCHITECTURE.md).
 
-در حالت **واضح و شنیداری**، سیگنال عمداً قابل شنیدن است. حالت **فرکانس‌بالا** کم‌شنواتر است اما فشرده‌سازی وویس می‌تواند آن را حذف کند؛ نام آن به معنی نامرئی یا غیرقابل‌شنیدن‌بودن قطعی نیست. بازیابی متن پس از واتساپ، بله یا هر پیام‌رسان دیگر هنوز باید با فایل واقعیِ دریافت‌شده از همان سرویس تست شود؛ سازگاری عمومی تضمین نشده است. افزایش قدرت گاهی کمک می‌کند ولی فرکانس حذف‌شده را برنمی‌گرداند.
+Desktop/native apps, mobile Chrome, arbitrary frames, video calls and all WebRTC paths are outside the tested scope. Pausing or stopping too early can damage a signal. High frequencies may be inaudible to some listeners and audible to others; compression often removes them. SonicQR is a text-over-audio protocol, not an image QR-code reader.
 
-افزونه نمی‌تواند میکروفون اپ مستقل ویندوز یا موبایل را تغییر بدهد. کل فرایند در تب وب همان کروم انجام می‌شود. فرمت بستهٔ متن همان SonicQR v3 است و حالت‌های موجود با برنامهٔ اصلی سازگارند؛ مسیر انتقال باید سیگنال را سالم نگه دارد.
+## Develop
 
-## حریم خصوصی
+Use Node.js 24 and npm. Exact versions are committed in `package-lock.json`.
 
-- متن، رمز و صوت به سروری ارسال نمی‌شوند؛ کتابخانه‌ها و کدها داخل افزونه‌اند.
-- متن و رمز در حافظهٔ صفحه می‌مانند و تاریخچه‌ای ذخیره نمی‌شود. فقط زبان رابط ذخیره می‌شود؛ شناسهٔ تب مقصد در حافظهٔ نشست مرورگر است.
-- سایت ضبط‌کننده به صدای ترکیبی دسترسی دارد و می‌تواند متن بدون رمز را استخراج کند. برای محرمانگی متن، رمز تعیین کن و آن را جدا به گیرنده بده. رمز وارد سیگنال یا کد تزریق‌شدهٔ سایت نمی‌شود؛ بستهٔ رمز‌شده وارد سایت می‌شود.
-- حالت معمول فقط به تبی که روی آیکون افزونه کلیک کرده‌ای دسترسی موقت می‌گیرد. دسترسی دائمی سایت اختیاری و برای هر سایت جدا است. میکروفون همچنان با اجازهٔ سایت و کروم کار می‌کند.
-- توقف ضبط، لغو ترکیب، پاک‌سازی منابع و پردازش محدود فایل در کد لحاظ شده‌اند. بستن پنل، دریافت صدای تب را پایان می‌دهد. برای لغو ضبط در سایت، دکمهٔ خود سایت را هم بزن.
-
-## توسعه و تست
-
-فایل‌های آمادهٔ root برای Load unpacked هستند. برای تغییر سورس، Node.js 24 لازم است:
-
-```bash
+```sh
 npm ci
-npm run build
-npm test
-npm run test:ui
-npm run test:recording
 npx playwright install chromium
-npm run test:browser
+npm run check
+npm run package
 ```
 
-در صورت تغییر کد، در `chrome://extensions` روی Reload افزونه بزن و تب سایت را دوباره بارگذاری کن. تست مرورگر از ورودی میکروفون مصنوعی استفاده می‌کند؛ برای نتیجهٔ سخت‌افزار واقعی، آزمایش داخلی را خودت با میکروفون انجام بده. شواهد و مرزهای بررسی در `VALIDATION.md` آمده‌اند.
+The runtime files at the repository root are generated and committed so the repository itself can be loaded unpacked. Edit `src/`, then run `npm run build`; `background.js`, HTML and CSS are maintained directly. `npm run package` creates an allowlisted, validated ZIP with `manifest.json` at its root, plus SHA-256 checksums in `dist/`.
 
-## English quick start
+For local UI/audio tests with an installed Chrome, set `SONICQR_BROWSER_EXECUTABLE` to its executable path. The installed-extension test requires a browser that permits loading an unpacked extension; CI uses Playwright's Chromium.
 
-Extract ZIP → `chrome://extensions` → Developer mode → Load unpacked → select the folder containing `manifest.json`. Pin SonicQR. Click its icon on your messenger's web tab. Run the built-in recording test first. Create a short **audible** signal, arm mixing, then record a voice message on the site until the signal finishes. Send it yourself. The recipient reads the downloaded audio file or captures the playing tab. Version 0.3.0 covers microphone input, MediaRecorder and Web Audio consumers. If the site is already recording but the mixed input is still waiting, use the manual signal-start button. Reload both the extension and site after an update. Native apps, arbitrary frames, other capture paths and preservation after messenger recompression are not guaranteed.
+| Resource | Purpose |
+|---|---|
+| [فارسی](docs/README.fa.md) | نصب، کاربری و محدودیت‌ها به فارسی |
+| [Architecture](docs/ARCHITECTURE.md) | Signal format, lifecycle and trust boundaries |
+| [Validation](VALIDATION.md) | Automated checks and their limits |
+| [Contributing](CONTRIBUTING.md) | Development and review conventions |
+| [Publishing](PUBLISHING.md) | Chrome Web Store submission checklist |
+| [Changelog](CHANGELOG.md) | Changes by version |
+
+## License
+
+[MIT](LICENSE). Bundled dependencies and icon credits are documented in [Third-party notices](THIRD_PARTY_NOTICES.md).

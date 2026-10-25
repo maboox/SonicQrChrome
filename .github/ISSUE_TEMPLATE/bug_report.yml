@@ -1,0 +1,27 @@
+name: Bug report / گزارش ایراد
+description: Report a reproducible problem using synthetic data.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: "English or فارسی is welcome. Never include passwords, private recordings or personal conversation URLs. Report vulnerabilities privately through the Security tab."
+  - type: input
+    id: version
+    attributes:
+      label: Extension and browser versions
+      placeholder: SonicQR 0.4.0, Chrome …, Windows/macOS/Linux …
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps, expected result and actual result
+      description: Use a short synthetic message and describe the recording path. Include a site name only if you are comfortable sharing it.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Optional diagnostic report
+      description: Review the report before sharing; it includes the site origin. Remove any sensitive origin. Do not attach personal voice messages.
+      render: json

@@ -1,9 +1,12 @@
 import { makePacket, modulate, waveBytes, PROFILES, SAMPLE_RATE } from './codec.mjs';
 import { Decoder, readAudio, capturePCM, download } from './media.mjs';
 import { I18N } from './i18n.mjs';
+import { renderIcons } from './icons.mjs';
 const $ = id => document.getElementById(id), decoder = new Decoder();
 const state = { lang: 'fa', tab: 'send', target: null, signal: null, phase: 'idle', busy: false, capture: null, starting: false, audio: null, packet: null, result: null, poll: false, error: '', notice: '', revision: 0, active: false, status: {} };
 let previewUrl = null;
+let targetRevision = 0, statusRevision = 0, pendingTarget = null, disposed = false;
+renderIcons();
 const tr = key => I18N[state.lang][key] || I18N[state.lang].unexpected;
 const number = x => new Intl.NumberFormat(state.lang === 'fa' ? 'fa-IR' : 'en', { maximumFractionDigits: 1 }).format(x);
 function supportedTarget() {
@@ -12,18 +15,20 @@ function supportedTarget() {
 function feedback(code, notice = false) { state[notice ? 'notice' : 'error'] = code; render(); }
 function render() {
   document.documentElement.lang = state.lang; document.documentElement.dir = state.lang === 'fa' ? 'rtl' : 'ltr';
+  document.body.dataset.mode = state.tab; document.body.dataset.ready = String(!!state.signal);
   document.querySelectorAll('[data-i18n]').forEach(el => el.textContent = tr(el.dataset.i18n));
-  $('language').textContent = state.lang === 'fa' ? 'EN' : 'فارسی';
+  $('languageLabel').textContent = state.lang === 'fa' ? 'EN' : 'فارسی';
+  document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = tr(el.dataset.i18nTitle); el.setAttribute('aria-label', el.title); });
   $('message').placeholder = state.lang === 'fa' ? 'پیامت را بنویس…' : 'Write your message…';
   $('password').placeholder = state.lang === 'fa' ? 'اختیاری' : 'Optional';
   $('sendPanel').hidden = state.tab !== 'send'; $('receivePanel').hidden = state.tab !== 'receive';
-  for (const tab of ['send','receive']) { $(tab+'Tab').classList.toggle('selected', state.tab === tab); $(tab+'Tab').setAttribute('aria-selected', String(state.tab === tab)); $(tab+'Tab').disabled = state.busy || state.starting || !!state.capture; }
+  for (const tab of ['send','receive']) { $(tab+'Tab').classList.toggle('selected', state.tab === tab); $(tab+'Tab').setAttribute('aria-selected', String(state.tab === tab)); $(tab+'Tab').tabIndex = state.tab === tab ? 0 : -1; $(tab+'Tab').disabled = state.busy || state.starting || !!state.capture; }
   const length = Array.from($('message').value).length;
   $('count').textContent = `${number(length)} / ${number(500)}`;
   $('count').style.color = length > 500 ? 'var(--red)' : '';
   $('profileHint').textContent = tr($('profile').value === 'hidden' ? 'hiddenHint' : 'fastHint');
-  $('build').disabled = !length || length > 500 || state.busy || state.active || state.starting || !!state.capture;
-  $('build').textContent = tr(state.busy && state.tab === 'send' ? 'building' : 'build');
+  $('build').disabled = !$('message').value.trim() || length > 500 || state.busy || state.active || state.starting || !!state.capture;
+  $('buildLabel').textContent = tr(state.busy && state.tab === 'send' ? 'building' : 'build');
   for (const id of ['message','password','profile','strength']) $(id).disabled = state.busy || state.active || state.starting || !!state.capture;
   $('ready').hidden = !state.signal;
   $('arm').disabled = !state.signal || !supportedTarget() || state.busy || state.active || state.phase === 'armed' || !!state.capture || state.starting;
@@ -40,7 +45,9 @@ function render() {
   $('holdTip').textContent = state.signal ? tr('hold').replace('{n}', number(state.signal.duration + 1)) : '';
   $('duration').textContent = state.signal ? `${number(state.signal.duration)} ${tr('seconds')}` : '';
   $('captureTab').disabled = !supportedTarget() || state.busy || state.starting || !!state.capture || state.active || state.phase === 'armed';
-  for (const id of ['enableSite', 'disableSite']) $(id).disabled = !supportedTarget() || state.busy || state.active;
+  for (const id of ['enableSite', 'disableSite']) $(id).disabled = !supportedTarget() || state.busy || state.active || state.starting || !!state.capture;
+  $('refreshTarget').disabled = state.busy || state.active || state.starting || !!state.capture;
+  $('clearSession').disabled = state.busy || state.active || state.starting || !!state.capture;
   $('audioFile').disabled = state.busy || state.starting || !!state.capture;
   $('decodePassword').disabled = state.busy || state.starting || !!state.capture;
   $('stopCapture').hidden = !state.capture; $('captureClock').hidden = !state.capture;
@@ -49,9 +56,11 @@ function render() {
   $('retry').hidden = !state.audio && !state.packet; $('retry').disabled = state.busy || !!state.capture || state.starting;
   $('error').hidden = !state.error; $('error').textContent = state.error ? tr(state.error) : '';
   $('notice').hidden = !state.notice; $('notice').textContent = state.notice ? tr(state.notice) : '';
-  $('targetName').textContent = state.target?.title || tr('noTarget'); $('targetUrl').textContent = state.target?.url || '';
+  $('targetName').textContent = state.target?.title || tr('noTarget');
+  try { $('targetUrl').textContent = new URL(state.target.url).origin; } catch { $('targetUrl').textContent = ''; }
 }
 async function message(type, extra = {}, tabId = state.target?.id) {
+  if (['ARM', 'DISARM', 'START_SIGNAL', 'ENABLE_SITE', 'DISABLE_SITE'].includes(type)) statusRevision++;
   const response = await chrome.runtime.sendMessage({ type, tabId, ...extra });
   if (!response?.ok) throw new Error(response?.error || 'unexpected');
   return response.result;
@@ -64,26 +73,37 @@ function setStatus(status) {
   render();
 }
 async function refreshTarget(preferred) {
-  if (state.capture || state.starting || state.busy) return;
+  if (state.capture || state.starting || state.busy || state.active) { if (preferred != null) pendingTarget = preferred; return; }
+  const revision = ++targetRevision;
   try {
     const win = await chrome.windows.getCurrent();
     const remembered = await chrome.storage.session.get(`window-${win.id}`);
     const id = preferred ?? remembered[`window-${win.id}`];
-    const target = id != null ? await chrome.tabs.get(id) : (await chrome.tabs.query({ active: true, windowId: win.id }))[0];
+    let target = id != null ? await chrome.tabs.get(id).catch(() => null) : null;
+    if (!target || target.windowId != null && target.windowId !== win.id) target = (await chrome.tabs.query({ active: true, windowId: win.id }))[0];
+    if (revision !== targetRevision || disposed) return;
     if (state.target && state.target.id !== target?.id && state.phase === 'armed') await message('DISARM').catch(() => {});
+    if (revision !== targetRevision || disposed) return;
     state.target = target; state.phase = 'idle'; state.active = false; state.status = {};
     if (target) {
-      setStatus(await message('STATUS'));
-      const site = await message('SITE_STATE'); $('disableSite').hidden = !site.enabled; $('enableSite').hidden = site.enabled;
+      const status = await message('STATUS', {}, target.id);
+      if (revision !== targetRevision || disposed) return;
+      setStatus(status);
+      const site = await message('SITE_STATE', {}, target.id);
+      if (revision !== targetRevision || disposed) return;
+      $('disableSite').hidden = !site.enabled; $('enableSite').hidden = site.enabled;
     }
-  } catch { state.target = null; state.phase = 'idle'; }
+  } catch { if (revision !== targetRevision || disposed) return; state.target = null; state.phase = 'idle'; state.active = false; state.status = {}; }
   render();
 }
 async function poll() {
-  if (state.poll || !state.target) return;
+  if (disposed || state.poll || state.busy || state.starting || state.capture) return;
+  if (pendingTarget != null && !state.active) { const id = pendingTarget; pendingTarget = null; await refreshTarget(id); return; }
+  if (!state.target) return;
+  const revision = targetRevision, operation = statusRevision, tabId = state.target.id;
   state.poll = true;
-  try { setStatus(await message('STATUS')); }
-  catch { state.phase = 'idle'; state.active = false; state.status = {}; }
+  try { const status = await message('STATUS', {}, tabId); if (revision === targetRevision && operation === statusRevision && !disposed) setStatus(status); }
+  catch { if (revision === targetRevision && operation === statusRevision) { state.phase = 'idle'; state.active = false; state.status = {}; } }
   finally { state.poll = false; render(); }
 }
 async function invalidate() {
@@ -126,7 +146,21 @@ $('saveSignal').onclick = () => { if (state.signal) download(state.signal.blob, 
 for (const id of ['message','password']) $(id).addEventListener('input', () => void invalidate());
 for (const id of ['profile','strength']) $(id).addEventListener('change', () => void invalidate());
 $('language').onclick = () => { state.lang = state.lang === 'fa' ? 'en' : 'fa'; void chrome.storage.local.set({ lang: state.lang }); render(); };
-for (const tab of ['send','receive']) $(tab+'Tab').onclick = () => { state.tab = tab; state.error = ''; state.notice = ''; render(); };
+for (const tab of ['send','receive']) {
+  $(tab+'Tab').onclick = () => { state.tab = tab; state.error = ''; state.notice = ''; render(); };
+  $(tab+'Tab').onkeydown = event => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    const next = event.key === 'Home' ? 'send' : event.key === 'End' ? 'receive' : state.tab === 'send' ? 'receive' : 'send';
+    if ($(next+'Tab').disabled) return;
+    event.preventDefault(); $(next+'Tab').click(); $(next+'Tab').focus();
+  };
+}
+$('clearSession').onclick = async () => {
+  await invalidate();
+  for (const id of ['message', 'password', 'decodePassword', 'audioFile']) $(id).value = '';
+  state.audio = null; state.packet = null; state.result = null; $('resultText').textContent = ''; $('filename').textContent = '';
+  feedback('sessionCleared', true);
+};
 $('refreshTarget').onclick = () => void refreshTarget();
 $('demo').onclick = () => chrome.tabs.create({ url: chrome.runtime.getURL('demo.html') });
 $('enableSite').onclick = async () => {
@@ -167,7 +201,10 @@ $('captureTab').onclick = async () => {
   try {
     const id = await chrome.tabCapture.getMediaStreamId({ targetTabId: state.target.id });
     const stream = await navigator.mediaDevices.getUserMedia({ audio: { mandatory: { chromeMediaSource: 'tab', chromeMediaSourceId: id } }, video: false });
+    if (disposed) { stream.getTracks().forEach(track => track.stop()); return; }
     state.capture = await capturePCM(stream, { monitor: true, onTime: elapsed => { $('captureClock').textContent = `${Math.floor(elapsed / 60)}:${String(Math.floor(elapsed % 60)).padStart(2, '0')}`; }, onLimit: () => void finishCapture() });
+    if (disposed) { await state.capture.stop(); state.capture = null; return; }
+    $('captureClock').textContent = '0:00';
     stream.getTracks().forEach(track => track.addEventListener('ended', () => void finishCapture(), { once: true }));
   } catch { feedback('captureError'); }
   finally { state.starting = false; render(); }
@@ -180,4 +217,4 @@ chrome.runtime.onMessage.addListener(message => { if (message.type === 'TARGET_C
 chrome.storage.local.get('lang').then(({ lang }) => { if (['fa','en'].includes(lang)) state.lang = lang; render(); });
 void refreshTarget(); render();
 const pollTimer = setInterval(() => void poll(), 600);
-addEventListener('pagehide', () => { clearInterval(pollTimer); decoder.cancel(); void state.capture?.stop(); if (state.phase === 'armed') void message('DISARM').catch(() => {}); });
+addEventListener('pagehide', () => { disposed = true; targetRevision++; clearInterval(pollTimer); decoder.cancel(); void state.capture?.stop(); if (previewUrl) URL.revokeObjectURL(previewUrl); if (['armed', 'waiting', 'blocked'].includes(state.phase)) void message('DISARM').catch(() => {}); });

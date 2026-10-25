@@ -25,6 +25,23 @@ test('A webpage cannot request injection or recording through the extension mess
   assert.equal(await h.request({type:'ARM',tabId:5,config:{}},{id:'test-extension',url:'https://messenger.example/chat'}),null);
   assert.equal(await h.request({type:'ARM',tabId:5,config:{}},{id:'another-extension',url:'chrome-extension://test-extension/panel.html'}),null);
   assert.deepEqual(h.calls,[]);
+  assert.equal(await h.request({type:'ARM',tabId:5,config:{}},{id:'test-extension',url:'chrome-extension://test-extension/demo.html'}),null);
+  assert.equal(await h.request({type:'ARM',tabId:5,config:{}},{id:'test-extension',url:'chrome-extension://test-extension/panel.html?spoof'}),null);
+});
+
+test('Missing, negative and non-integer tab identifiers cannot trigger injection', async () => {
+  const h = await harness();
+  for (const tabId of [undefined, -1, 1.5, '9']) {
+    assert.equal((await h.request({type:'ARM',tabId,config:{}})).error, 'unsupportedTab');
+  }
+  assert.deepEqual(h.calls, []);
+});
+
+test('Permission alone does not imply that the early compatibility hook is registered', async () => {
+  const h = await harness('https://messenger.example/chat', true);
+  assert.equal((await h.request({type:'SITE_STATE',tabId:9})).result.enabled, false);
+  await h.request({type:'ENABLE_SITE',tabId:9});
+  assert.equal((await h.request({type:'SITE_STATE',tabId:9})).result.enabled, true);
 });
 test('Privileged and insecure pages are rejected before any script injection',async()=>{
   for(const url of ['chrome://settings','file:///private/audio.wav','http://insecure.example/chat']){

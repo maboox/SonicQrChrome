@@ -21,6 +21,7 @@ export class Decoder {
     this.cancel();
     return new Promise((resolve, reject) => {
       this.reject = reject;
+      try {
       const worker = this.worker = new Worker('./decoder.worker.js');
       this.timeout = setTimeout(() => { this.cancel('decodeTimeout'); }, 45000);
       worker.onmessage = ({ data }) => {
@@ -30,6 +31,7 @@ export class Decoder {
       };
       worker.onerror = () => this.cancel('decodeError');
       worker.postMessage(packet ? { id: 1, packet, password } : { id: 1, ...audio, password });
+      } catch { this.cancel('decodeError'); }
     });
   }
   cancel(code = 'cancelled') {
@@ -38,10 +40,11 @@ export class Decoder {
   }
 }
 export async function capturePCM(stream, { monitor = false, onTime = () => {}, onLimit = () => {} } = {}) {
-  const context = new AudioContext({ sampleRate: 48000 });
+  let context;
   let source, node, frames = 0, flushResolve, stopped = false;
   const chunks = [];
   try {
+    context = new AudioContext({ sampleRate: 48000 });
     await context.resume();
     await context.audioWorklet.addModule('./recorder.worklet.js');
     node = new AudioWorkletNode(context, 'pcm-recorder');
@@ -52,25 +55,31 @@ export async function capturePCM(stream, { monitor = false, onTime = () => {}, o
         const chunk = data.subarray(0, Math.max(0, MAX_AUDIO_SECONDS * context.sampleRate - frames));
         chunks.push(chunk); frames += chunk.length; onTime(frames / context.sampleRate);
       }
-      if (frames >= MAX_AUDIO_SECONDS * context.sampleRate) onLimit();
+      if (frames >= MAX_AUDIO_SECONDS * context.sampleRate) limit();
     };
     source.connect(node); node.connect(context.destination);
     if (monitor) source.connect(context.destination);
-    const timer = setTimeout(onLimit, MAX_AUDIO_SECONDS * 1000);
+    let limited = false;
+    const limit = () => { if (!limited && !stopped) { limited = true; onLimit(); } };
+    const timer = setTimeout(limit, MAX_AUDIO_SECONDS * 1000);
     return {
       async stop() {
         if (stopped) return null;
         stopped = true; clearTimeout(timer);
-        await new Promise(resolve => { flushResolve = resolve; node.port.postMessage('stop'); setTimeout(resolve, 250); });
-        stream.getTracks().forEach(track => track.stop()); source.disconnect(); node.disconnect();
         const sampleRate = context.sampleRate;
-        await context.close();
+        try {
+          await new Promise(resolve => { const timeout = setTimeout(resolve, 250); flushResolve = () => { clearTimeout(timeout); resolve(); }; node.port.postMessage('stop'); });
+        } finally {
+          stream.getTracks().forEach(track => track.stop()); source.disconnect(); node.disconnect();
+          node.port.onmessage = null; node.port.close();
+          await context.close();
+        }
         const samples = new Float32Array(frames); let offset = 0;
         for (const chunk of chunks) { samples.set(chunk, offset); offset += chunk.length; }
         return { samples, sampleRate };
       }
     };
-  } catch (error) { stream.getTracks().forEach(track => track.stop()); source?.disconnect(); node?.disconnect(); await context.close(); throw error; }
+  } catch (error) { stream.getTracks().forEach(track => track.stop()); source?.disconnect(); node?.disconnect(); await context?.close(); throw error; }
 }
 export function download(blob, name) {
   const url = URL.createObjectURL(blob), link = document.createElement('a');
